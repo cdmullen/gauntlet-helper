@@ -1,0 +1,5 @@
+# Text is stored and checked out with LF; Windows batch files are checked out with CRLF, which cmd.exe expects.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.png binary
