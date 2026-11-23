@@ -3,7 +3,7 @@
 # Gauntlet Helper
 
 A [RuneLite](https://runelite.net) plugin that guides the preparation phase of a **Corrupted Gauntlet** or **regular
-Gauntlet** run (no armor or full T1, T2 or T3 armor), in the style of Quest Helper: it shows what to do now, what comes next, and where to go, while you do every click yourself.
+Gauntlet** run (no armor or full T1, T2 or T3 armor), in the style of Quest Helper: it shows what to do now, what comes next, and where to go.
 
 ![The overlay panel during the five-room opening: the bark to chop is outlined, with the path to it and the next door previewed](docs/screenshots/opening-panel.png)
 
