@@ -189,6 +189,8 @@ public final class TripPlanner
 	private String cachedKey;
 	private Result cached;
 	private static final int WIDTH = 48, MAX_EVALUATIONS = 6000, MAX_DEPTH = 36;
+	/** The four room steps: north, east, south, west. Never written. */
+	private static final int[][] ROOM_STEPS = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
 
 	public void reset()
 	{
@@ -197,7 +199,7 @@ public final class TripPlanner
 	}
 
 	public Result plan(GauntletMap map, Point start, Requirements goal, Inventory inv,
-		GroundLoot loot, DemiBossTracker kills, Set<Point> firstSteps, int maxDistance)
+			GroundLoot loot, DemiBossTracker kills, Set<Point> firstSteps, int maxDistance)
 	{
 		return plan(map, start, goal, inv, loot, kills, firstSteps, maxDistance, true);
 	}
@@ -221,10 +223,8 @@ public final class TripPlanner
 		text.append(map.getRouteRevision()).append('|').append(start).append('|')
 				.append(new TreeMap<>(inv.getHeldItems())).append('|').append(new TreeMap<>(inv.getEquippedItems()))
 				.append('|').append(inv.getFreeSlots()).append('|').append(demiSearch).append('|')
-				.append(goal.getFoodTarget()).append(':').append(goal.getLeafTarget()).append(':')
-				.append(goal.getCraftedPotions()).append(':')
-				.append(goal.isStaffRequired()).append(':').append(goal.getWeaponPair()).append(':')
-				.append(goal.getSelection()).append(':').append(goal.getArmorGoal())
+				// The capped food target the search plans for, then every Goals field (Goals.buildCacheKey).
+				.append(goal.getFoodTarget()).append(':').append(goal.getGoals().buildCacheKey())
 				.append('|').append(raw).append(':').append(cooked).append('|')
 				.append(ordered).append('|').append(maxDistance).append('|')
 				.append(kills == null ? "" : kills.buildForecastKey());
@@ -550,7 +550,7 @@ public final class TripPlanner
 	private static Set<Point> findNeighbors(GauntletMap map, Point room)
 	{
 		Set<Point> result = new LinkedHashSet<>();
-		for (int[] offset : new int[][]{{0, 1}, {1, 0}, {0, -1}, {-1, 0}})
+		for (int[] offset : ROOM_STEPS)
 		{
 			Point neighbor = new Point(room.getX() + offset[0], room.getY() + offset[1]);
 			if (map.getRoom(neighbor) != null)
@@ -669,7 +669,7 @@ public final class TripPlanner
 	}
 
 	/**
-	 * An incomplete forecast whose only work is a trip home (teleport, craft, cook, store), while fish are still
+	 * An incomplete forecast whose only work is a trip home (teleport, craft, cook, drop fish), while fish are still
 	 * missing and the inventory has room for all of them. That happens when no known fishing spot is in reach: the home
 	 * work lowers the deficit, so the home trip wins the progress ranking, and the player must come straight back out
 	 * for the fish. Lighting a nearby room for a new spot is better; the home work waits for the one trip
@@ -744,7 +744,7 @@ public final class TripPlanner
 		return any;
 	}
 
-	/** Fish from a fishing spot count toward the missing quota; stored fish only once the final pickup is due. */
+	/** Fish from a fishing spot count toward the missing quota; fish left at home only once the final pickup is due. */
 	private static int countFishNeeded(Source source, Requirements plan, Inventory inv)
 	{
 		if (source.harvest)

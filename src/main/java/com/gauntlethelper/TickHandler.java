@@ -81,6 +81,14 @@ final class TickHandler
 	private WorldPoint teleportFrom;
 	private int lastLootScan;
 	private WorldPoint lastLootPosition;
+	/** Which reset the last observed tick ended with outside the Gauntlet; later ticks still outside skip it. */
+	private Idle idle = Idle.NONE;
+
+	/** The reset an outside tick ran: none yet, leaving the Gauntlet (leavePrep) or the attempt reset (clear). */
+	private enum Idle
+	{
+		NONE, LEFT, CLEARED
+	}
 
 	TickHandler(GauntletHelperPlugin plugin)
 	{
@@ -90,14 +98,46 @@ final class TickHandler
 	/** The only per-tick observe (GauntletHelperPlugin.onGameTick says why no other handler is needed). */
 	void observe()
 	{
-		observeState();
+		if (isStillIdle())
+			return;
+		Idle reset = observeState();
 		if (plugin.recorder != null)
 			new AttemptCapture(plugin, plugin.client, plugin.config, plugin.guidance).record(plugin.recorder);
+		idle = reset;
 	}
 
-	/** Attempt reset (logged out, dead, plugin off): everything, and the recording stops. */
+	/**
+	 * True when an earlier tick already ran this tick's reset outside the Gauntlet and its recording end: still logged
+	 * out or dead after the attempt reset, or still outside, neither in preparation nor fighting the boss. Loading and
+	 * reconnecting are never idle, so their early-out runs as before. The varbits are read every tick, so entry is
+	 * noticed on the tick it happens; this check writes nothing, so that tick observes exactly as before.
+	 */
+	private boolean isStillIdle()
+	{
+		if (idle == Idle.NONE)
+			return false;
+		Client client = plugin.client;
+		GameState state = client.getGameState();
+		if (state == GameState.LOADING || state == GameState.CONNECTION_LOST)
+			return false;
+		if (isLoggedOutOrDead())
+			return idle == Idle.CLEARED;
+		boolean inside = isInside();
+		boolean started = isBossStarted();
+		return !GauntletHelperPlugin.isPrep(true, inside, started) && !isBossFight(started, inside);
+	}
+
+	private boolean isLoggedOutOrDead()
+	{
+		Client client = plugin.client;
+		return !plugin.running || client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null
+				|| client.getBoostedSkillLevel(Skill.HITPOINTS) <= 0;
+	}
+
+	/** Attempt reset (logged out, dead, plugin off): everything, and the recording stops. The next tick observes in full. */
 	void clear()
 	{
+		idle = Idle.NONE;
 		plugin.inPrep = false;
 		plugin.inBossFight = false;
 		plugin.mode = GauntletMode.CORRUPTED;
@@ -105,7 +145,7 @@ final class TickHandler
 		clearPrepGuidance();
 		resetAttemptLedgers();
 		if (plugin.recorder != null)
-			plugin.recorder.stop(plugin.client.getTickCount(), "attempt reset");
+			plugin.recorder.endAttempt(plugin.client.getTickCount(), "attempt reset");
 	}
 
 	/**
@@ -143,9 +183,10 @@ final class TickHandler
 	 * One tick's observation, in this order: leave early while loading or reconnecting (the attempt stays), logged
 	 * out, dead or outside preparation;
 	 * read the inventory into the plan; observe the scene and ground items and credit them to the plan; run the
-	 * scene's guidance; set the inventory cues and the teleport suggestion; log; refresh the infoboxes.
+	 * scene's guidance; set the inventory cues and the teleport suggestion; log; refresh the infoboxes. Returns the
+	 * reset a tick ending outside ran (NONE inside, loading or in the boss fight), which later ticks outside skip.
 	 */
-	private void observeState()
+	private Idle observeState()
 	{
 		Client client = plugin.client;
 		Player player = client.getLocalPlayer();
@@ -153,31 +194,31 @@ final class TickHandler
 		{
 			plugin.scanRequired = true;
 			plugin.guidance.pauseGuidance();
-			return;
+			return Idle.NONE;
 		}
-		if (!plugin.running || client.getGameState() != GameState.LOGGED_IN || player == null || client.getBoostedSkillLevel(Skill.HITPOINTS) <= 0)
+		if (isLoggedOutOrDead())
 		{
 			clear();
-			return;
+			return Idle.CLEARED;
 		}
 		boolean wasInPrep = plugin.inPrep;
 		readGauntletState();
 		if (!plugin.inPrep)
 		{
 			leavePrep();
-			return;
+			return plugin.inBossFight ? Idle.NONE : Idle.LEFT;
 		}
 		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
 		ItemContainer equipment = client.getItemContainer(InventoryID.WORN);
 		if (inventory == null)
 		{
 			plugin.plan = null;
-			return;
+			return Idle.NONE;
 		}
 		Map<Integer, Integer> held = countItems(inventory);
 		Map<Integer, Integer> worn = countItems(equipment);
 		if (shouldHoldTeleport(held.getOrDefault(ItemID.GAUNTLET_TELEPORT_CRYSTAL_HM, 0), player.getWorldLocation()))
-			return;
+			return Idle.NONE;
 		int slots = countOccupiedSlots(inventory);
 		plugin.snapshot = new Inventory(held, worn, slots);
 		plugin.plan = Requirements.live(plugin.snapshot, plugin.config, plugin.potionProgress, plugin.weaponSelection);
@@ -192,6 +233,7 @@ final class TickHandler
 		setInventoryCues(inventory);
 		suggestTeleport(held, slots, urgent);
 		refreshInfoBoxes();
+		return Idle.NONE;
 	}
 
 	/**
@@ -201,15 +243,28 @@ final class TickHandler
 	 */
 	private void readGauntletState()
 	{
-		Client client = plugin.client;
-		WorldView view = client.getTopLevelWorldView();
-		boolean inside = client.getVarbitValue(VarbitID.PLAYER_IN_GAUNTLET) == 1 && (view == null || view.isInstance());
-		int corruptedVarbit = client.getVarbitValue(VarbitID.GAUNTLET_CORRUPTED);
-		boolean fighting = client.getVarbitValue(VarbitID.GAUNTLET_BOSS_STARTED) == 1;
+		boolean inside = isInside();
+		boolean fighting = isBossStarted();
 		plugin.inPrep = GauntletHelperPlugin.isPrep(true, inside, fighting);
-		plugin.inBossFight = fighting && (corruptedVarbit == 1 || inside);
+		plugin.inBossFight = isBossFight(fighting, inside);
 		if (inside)
-			setMode(GauntletMode.of(true, corruptedVarbit));
+			setMode(GauntletMode.of(true, plugin.client.getVarbitValue(VarbitID.GAUNTLET_CORRUPTED)));
+	}
+
+	private boolean isInside()
+	{
+		WorldView view = plugin.client.getTopLevelWorldView();
+		return plugin.client.getVarbitValue(VarbitID.PLAYER_IN_GAUNTLET) == 1 && (view == null || view.isInstance());
+	}
+
+	private boolean isBossStarted()
+	{
+		return plugin.client.getVarbitValue(VarbitID.GAUNTLET_BOSS_STARTED) == 1;
+	}
+
+	private boolean isBossFight(boolean started, boolean inside)
+	{
+		return started && (inside || plugin.client.getVarbitValue(VarbitID.GAUNTLET_CORRUPTED) == 1);
 	}
 
 	/** The attempt's mode, kept through the boss fight. The two Gauntlets never share an attempt: leaving one resets it. */
@@ -286,7 +341,7 @@ final class TickHandler
 		plugin.loot.expire(plugin.client.getTickCount());
 	}
 
-	/** Stored fish, the attempt's fish quota, armor crafted onto the floor and finished tools, into the plan. */
+	/** Fish left at home, the attempt's fish quota, armor crafted onto the floor and finished tools, into the plan. */
 	private void creditObservations()
 	{
 		plugin.plan = plugin.plan.withStoredFood(plugin.loot.countHomeFood());
@@ -323,7 +378,7 @@ final class TickHandler
 			visit.previewCrafts();
 	}
 
-	/** Time low (setting Time guidance), or stored fish expiring once only their retrieval is left. */
+	/** Time low (setting Time guidance), or fish left at home expiring once only their pickup is left. */
 	private boolean isUrgent()
 	{
 		return isTimeLow() || (plugin.loot.hasExpiringHomeFood(plugin.client.getTickCount()) && plugin.plan.isReadyForStoredFood());

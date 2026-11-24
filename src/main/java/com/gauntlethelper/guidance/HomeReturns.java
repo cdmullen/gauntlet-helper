@@ -41,7 +41,7 @@ import net.runelite.api.Point;
 import net.runelite.api.gameval.ItemID;
 
 /**
- * The task steps that head home or back for seen loot: the full-inventory, time-low, stored-fish and observed-loot returns, and the
+ * The task steps that head home or back for seen loot: the full-inventory, time-low, left-fish and observed-loot returns, and the
  * last resort when nothing else has a task but home has work.
  * Each decides from the TickContext; TaskPriorities.publish does the walking.
  */
@@ -52,7 +52,7 @@ final class HomeReturns
 	/** What the latest full-inventory trip home planned, for the Next line. The space return latch is AttemptLatches's. */
 	private static final class FullReturn
 	{
-		/** The trip home will cook and store before the bowl (isStorageFirst). */
+		/** The trip home will cook and drop fish before the bowl (isStorageFirst). */
 		private boolean storageFirst;
 
 		void reset() { storageFirst = false; }
@@ -82,7 +82,7 @@ final class HomeReturns
 	}
 
 	/**
-	 * Crafts wait for slots that the drop cues won't free, so only storing fish makes the room. Doing what a cue asks
+	 * Crafts wait for slots that the drop cues won't free, so only dropping fish makes the room. Doing what a cue asks
 	 * then never changes the station, and a player who leaves the cued item held still gets the crafts that fit first.
 	 */
 	static boolean isWaitingPastDropCues(Requirements plan, HomeCraftPlan home, InventoryAdvice advice)
@@ -91,24 +91,24 @@ final class HomeReturns
 	}
 
 	/**
-	 * The full-inventory trip home names only the home jobs this inventory has: craft when a recipe is available, store
+	 * The full-inventory trip home names only the home jobs this inventory has: craft when a recipe is available, drop
 	 * fish when fish are held.
 	 */
 	static String buildFullReturnInstruction(Requirements plan, HomeVisit visit)
 	{
 		if (visit.canCraft() && isStorageFirst(plan, visit))
-			return "Inventory full: return home to cook and store fish, then craft";
+			return "Inventory full: return home to cook and drop fish, then craft";
 		return "Inventory full: return home to " + describeHomeJobs(visit.canCraft(), plan.hasFish());
 	}
 
 	private static String describeHomeJobs(boolean craft, boolean fish)
 	{
 		if (craft && fish)
-			return "craft and store fish";
+			return "craft and drop fish";
 		if (craft)
 			return "craft supplies";
 		if (fish)
-			return "store fish";
+			return "drop fish";
 		return "make space";
 	}
 
@@ -144,7 +144,7 @@ final class HomeReturns
 	{
 		if (!context.retrieveFood() || context.loot.countHomeFood() <= 0 || context.isAtHome() || !context.canWalkTo(GauntletMap.HOME))
 			return null;
-		return Decision.walkTo(GauntletMap.HOME, "Return home to retrieve stored fish");
+		return Decision.walkTo(GauntletMap.HOME, "Return home to pick up the fish you left");
 	}
 
 	/** The nearest other room with needed ground loot already seen, while a slot is free. */

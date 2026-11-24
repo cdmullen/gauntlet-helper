@@ -97,6 +97,15 @@ public final class Goals
 	public int getArmorGoal() { return armorGoal; }
 	public boolean isStaffRequired() { return selection.contains(WeaponType.STAFF); }
 
+	/**
+	 * Every field as one string, for caches keyed on the goals (TripPlanner's forecast key). A new field must be added
+	 * here as well as to equals and hashCode, or a cache keeps a result planned for other goals.
+	 */
+	public String buildCacheKey()
+	{
+		return foodTarget + ":" + leafTarget + ":" + craftedPotions + ":" + weaponPair + ":" + selection + ":" + armorGoal;
+	}
+
 	@Override
 	public boolean equals(Object other)
 	{

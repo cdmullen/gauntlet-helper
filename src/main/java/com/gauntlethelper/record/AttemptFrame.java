@@ -234,6 +234,7 @@ public final class AttemptFrame
 		add(values, "highlightEnemiesTrueTiles", config::highlightEnemiesTrueTiles);
 		add(values, "highlightTargetedDemiBossesClickboxes", config::highlightTargetedDemiBossesClickboxes);
 		add(values, "highlightDemiBossesTrueTiles", config::highlightDemiBossesTrueTiles);
+		add(values, "highlightGuaranteedDemiDoors", config::highlightGuaranteedDemiDoors);
 		add(values, "darkBeastColor", config::darkBeastColor);
 		add(values, "dragonColor", config::dragonColor);
 		add(values, "bearColor", config::bearColor);
@@ -247,6 +248,15 @@ public final class AttemptFrame
 		add(values, "hideCompletedResourceMinimapIcons", config::hideCompletedResourceMinimapIcons);
 		add(values, "showMinimapRouteLine", config::showMinimapRouteLine);
 		add(values, "showDemiBossMinimapIcons", config::showDemiBossMinimapIcons);
+		add(values, "showRoomMap", config::showRoomMap);
+		add(values, "roomMapStyle", config::roomMapStyle);
+		add(values, "gauntletMapTileSize", config::gauntletMapTileSize);
+		add(values, "gauntletMapOpacity", config::gauntletMapOpacity);
+		add(values, "showRoomMapResources", config::showRoomMapResources);
+		add(values, "hideCompletedMapResourceIcons", config::hideCompletedMapResourceIcons);
+		add(values, "showCurrentRoomResources", config::showCurrentRoomResources);
+		add(values, "highlightCurrentRoom", config::highlightCurrentRoom);
+		add(values, "showRoomMapRoute", config::showRoomMapRoute);
 		add(values, "oreTracker", config::oreTracker);
 		add(values, "barkTracker", config::barkTracker);
 		add(values, "linumTirinumTracker", config::linumTirinumTracker);

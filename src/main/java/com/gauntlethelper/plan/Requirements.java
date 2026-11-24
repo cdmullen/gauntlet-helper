@@ -126,7 +126,7 @@ public final class Requirements
 	private final int foodTarget, foodCap;
 	private final int supplySlotsShortfall;
 	private final boolean needsWater;
-	/** The rows from the inventory alone, before stored food and ground armor are credited: the instruction wording counts these. */
+	/** The rows from the inventory alone, before food left at home and ground armor are credited: the instruction wording counts these. */
 	private final Map<Requirement, Row> heldRows;
 
 	// Set while a new value is built, never after it is returned.
@@ -411,7 +411,7 @@ public final class Requirements
 			inventoryAction = InventoryAction.MAKE_SPACE;
 	}
 
-	/** Deferred upgrades with a full bag: cooking fills no slot and the upgrades go in place, so only stored fish want one. */
+	/** Deferred upgrades with a full bag: cooking fills no slot and the upgrades go in place, so only fish left at home want one. */
 	public boolean isFullBagHarmless()
 	{
 		return upgradesDeferred && (hasFishToCook() || storedFood == 0);
@@ -515,7 +515,7 @@ public final class Requirements
 	}
 
 	/**
-	 * The same plan aimed at a lower food target (FoodTargetLatch, once the attempt's quota was met). Stored food and ground
+	 * The same plan aimed at a lower food target (FoodTargetLatch, once the attempt's quota was met). Food left at home and ground
 	 * armor credits are not carried over; callers apply them again.
 	 */
 	public Requirements withFoodTarget(int target)
@@ -568,7 +568,7 @@ public final class Requirements
 
 	/**
 	 * Gear, potions and the fish quota are done, counting crafted armor that still lies on the ground: what remains is
-	 * picking it up, equipping, cooking and food. Unlike isReadyForStoredFood (the stored-fish pickup gate), this doesn't
+	 * picking it up, equipping, cooking and food. Unlike isReadyForStoredFood (the pickup gate for fish left at home), this doesn't
 	 * wait for that pickup or an Equip task, so unneeded items get drop cues as soon as they stop being needed.
 	 */
 	public boolean isOnlyFoodLeft()
@@ -617,7 +617,7 @@ public final class Requirements
 
 	public boolean isUpgradesDeferred() { return upgradesDeferred; }
 
-	/** Deferred upgrades wait while raw fish need cooking or stored food can be retrieved. */
+	/** Deferred upgrades wait while raw fish need cooking or food left at home can be picked up. */
 	private boolean isFoodBeforeUpgrades()
 	{
 		return upgradesDeferred && (hasFishToCook() || storedFood > 0 && isReadyForStoredFood());
@@ -641,7 +641,7 @@ public final class Requirements
 	}
 
 	public Row getRow(Requirement resource) { return rows.get(resource); }
-	/** The row from the inventory alone, before stored food and ground armor are credited. */
+	/** The row from the inventory alone, before food left at home and ground armor are credited. */
 	Row getHeldRow(Requirement resource) { return heldRows.get(resource); }
 	public boolean isReady() { return ready; }
 	public int getFreeSlots() { return inventory.getFreeSlots(); }
@@ -831,7 +831,7 @@ public final class Requirements
 	}
 
 	public boolean needsWater() { return needsWater; }
-	/** Raw or cooked paddlefish held: the range has a cook or store job at home. */
+	/** Raw or cooked paddlefish held: the range has a cook or drop job at home. */
 	public boolean hasFish()
 	{
 		return inventory.getHeld(GAUNTLET_RAW_FOOD) > 0 || inventory.getHeld(GAUNTLET_FOOD) > 0;

@@ -53,7 +53,7 @@ import static net.runelite.api.gameval.ItemID.GAUNTLET_VIAL_EMPTY;
 import static net.runelite.api.gameval.ItemID.GAUNTLET_VIAL_EMPTY_HM;
 import static net.runelite.api.gameval.ItemID.GAUNTLET_VIAL_WATER;
 
-/** Full-prep capacity includes remaining fishing; stored food is recovered only at the final food task. */
+/** Full-prep capacity includes remaining fishing; food left at home is picked up only at the final food task. */
 public final class InventoryAdvice
 {
 	private final Map<Integer, Integer> drops = new LinkedHashMap<>();
@@ -73,7 +73,7 @@ public final class InventoryAdvice
 		return cookBeforeStoring > 0 || drops.containsKey(GAUNTLET_RAW_FOOD) || drops.containsKey(GAUNTLET_FOOD);
 	}
 
-	/** Raw fish to cook at the range before any fish is left at home (fish are stored cooked, dropped at the range). */
+	/** Raw fish to cook at the range before any fish is left at home (fish are left cooked, dropped at the range). */
 	public int getCookBeforeStoring() { return cookBeforeStoring; }
 	public final int requiredSlots;
 
@@ -102,7 +102,7 @@ public final class InventoryAdvice
 				if (!plan.getDesiredWeaponTypes().contains(type))
 					for (Tier tier : Tier.values())
 						add(inv, type.getItem(tier), inv.getHeld(type.getItem(tier)));
-		// Surplus fish are dropped cooked at the range; the cue appears once the fixed number to store is cooked.
+		// Surplus fish are dropped cooked at the range; the cue appears once the fixed number to drop is cooked.
 		int toStore = Simulation.countFishToStore(plan, inv, plan.getStoredFood(), capacity);
 		if (capacity.rawToStore > 0 && inv.getHeld(GAUNTLET_RAW_FOOD) > 0)
 		{
@@ -184,13 +184,13 @@ public final class InventoryAdvice
 	public boolean isDropInProgress() { return dropInProgress; }
 	public String getInstruction()
 	{
-		// The number to store is known before the first fish is cooked, so the wording stays the same when its red
+		// The number to drop is known before the first fish is cooked, so the wording stays the same when its red
 		// drop squares appear.
 		if (cookBeforeStoring > 0)
 			return "Cook " + cookBeforeStoring + " paddlefish at the range, then drop " + fishToStore + " cooked fish there";
-		return shouldStoreFish() ? "Leave "
+		return shouldStoreFish() ? "Drop "
 				+ (drops.getOrDefault(GAUNTLET_RAW_FOOD, 0) + drops.getOrDefault(GAUNTLET_FOOD, 0))
-				+ " cooked fish at the range for final retrieval" : null;
+				+ " cooked fish at the range to pick up at the end" : null;
 	}
 
 	public static Map<Integer, String> buildActions(Requirements plan, Inventory inv)

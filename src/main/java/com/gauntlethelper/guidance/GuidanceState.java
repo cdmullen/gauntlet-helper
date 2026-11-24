@@ -54,6 +54,11 @@ public final class GuidanceState
 	NPC sideEnemyTarget;
 	WorldPoint groundTarget;
 	Point inspectionGoal;
+	/**
+	 * inspectionGoal is a walk's destination (a room route the task follows), not a tour goal that only steers which door
+	 * of this room lights next. The room map shows a walk's destination even while its next door is in this room.
+	 */
+	boolean goalIsWalk;
 	List<Point> path = Collections.emptyList();
 	LocalPathfinder lastRoute;
 	/** The route over known rooms built from knownRouteBase, this tick's until clearRouteCache. */
@@ -99,6 +104,7 @@ public final class GuidanceState
 		enemyTarget = null;
 		sideEnemyTarget = null;
 		inspectionGoal = null;
+		goalIsWalk = false;
 		path = Collections.emptyList();
 		roomPlanNextKind = null;
 		roomTerminalService = null;

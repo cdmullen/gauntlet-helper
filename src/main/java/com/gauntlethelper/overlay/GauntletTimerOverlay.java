@@ -46,7 +46,8 @@ import net.runelite.client.ui.overlay.components.TitleComponent;
 /**
  * The Gauntlet plugin's timer overlay, without its chat timer: elapsed preparation time, then a grayed preparation
  * time and a running total once Hunllef's fight starts, and "Time left:" while the game's own Time Left box is
- * hidden (GauntletTimeLeft). Leaving resets it. Its priority puts it at the top of the snapped top-left stack.
+ * hidden (GauntletTimeLeft). Leaving resets it. Its priority puts it below the room map and above the task panel in
+ * the snapped top-left stack (TopLeftStack).
  * <p>Times count game ticks, 0.6 s each, because the game times the Gauntlet and its combat achievements in ticks;
  * wall-clock seconds drift from them, so the two lines could add up to more than the prep length.
  * While Time left is known the entry tick is anchored to it (GauntletMode.getPrepTicks: 750 ticks of prep in the
@@ -72,7 +73,7 @@ public class GauntletTimerOverlay extends OverlayPanel
 		setPosition(OverlayPosition.TOP_LEFT);
 		setMovable(true);
 		setSnappable(true);
-		setPriority(PRIORITY_HIGHEST);
+		setPriority(TopLeftStack.TIMER_PRIORITY);
 	}
 
 	/**
@@ -124,14 +125,9 @@ public class GauntletTimerOverlay extends OverlayPanel
 	/**
 	 * The timer's lines as {left, right}, with a third "gray" entry on the grayed preparation time once Hunllef starts.
 	 * Starts and currentTick are game ticks. Time left (secondsLeft, -1 when unknown) shows only during prep, and Preparation is then
-	 * 7:30 minus it. Once Hunllef starts: grayed Preparation, Boss (ticks since the fight began) and Total.
+	 * the mode's prep length (7:30 or 10:00) minus it. Once Hunllef starts: grayed Preparation, Boss (ticks since the fight began)
+	 * and Total.
 	 */
-	static List<String[]> buildLines(long gauntletStart, long hunllefStart, long currentTick, int secondsLeft)
-	{
-		return buildLines(gauntletStart, hunllefStart, currentTick, secondsLeft, GauntletMode.CORRUPTED);
-	}
-
-	/** As above in a given Gauntlet: Preparation is its prep length (7:30 or 10:00) minus Time left. */
 	static List<String[]> buildLines(long gauntletStart, long hunllefStart, long currentTick, int secondsLeft, GauntletMode mode)
 	{
 		List<String[]> lines = new ArrayList<>();

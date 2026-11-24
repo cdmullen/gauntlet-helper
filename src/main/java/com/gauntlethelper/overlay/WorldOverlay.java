@@ -32,6 +32,7 @@ import com.gauntlethelper.GauntletHelperPlugin;
 import com.gauntlethelper.config.GauntletHelperConfig;
 import com.gauntlethelper.config.ResourceSettings;
 import com.gauntlethelper.game.ObjectKind;
+import com.gauntlethelper.guidance.DemiDoorway;
 import com.gauntlethelper.guidance.EnemyRules;
 import com.gauntlethelper.guidance.Guidance;
 import com.gauntlethelper.plan.HomeCraftPlan;
@@ -40,6 +41,7 @@ import com.gauntlethelper.plan.Requirement;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Shape;
@@ -47,6 +49,7 @@ import java.awt.Stroke;
 import java.util.Collections;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
@@ -57,6 +60,7 @@ import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldArea;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -74,6 +78,16 @@ public class WorldOverlay extends Overlay
 	public static final int DEMI_STROKE = 2;
 	/** Demi clickboxes are outline-only: a fill tints the large model and its tiles. */
 	public static final int DEMI_FILL_ALPHA = 0;
+	/** The Guaranteed demi doors label; it never names a boss, since the room's demi is unknown until it is lit. */
+	static final String DEMI_DOOR_LABEL = "Demi room";
+	/** How far past the doorway's midpoint the label floats, into the dark room: one tile. */
+	static final int DEMI_DOOR_LABEL_PUSH = Perspective.LOCAL_TILE_SIZE;
+	/** The label's height above the floor, about a doorway's height. */
+	static final int DEMI_DOOR_LABEL_Z = 150;
+	/** A soft, brighter tint of the room map's guaranteed demi room red, so the label and the map read as one. */
+	static final Color DEMI_DOOR_COLOR = new Color(235, 100, 90);
+	/** The phase prefix getWorldLabel strips, such as "Opening loop 3/5: ". */
+	static final Pattern PHASE_PREFIX = Pattern.compile("^(?i)(After opening loop|Opening loop(?: \\d+/\\d+)?|Demi hunting|Demi search): *");
 	private static final Logger log = LoggerFactory.getLogger(WorldOverlay.class);
 	/** NPCs whose last geometry read threw and has been logged; one line per NPC, however many frames it lasts. */
 	private static final Set<NPC> UNREADABLE_NPCS = Collections.newSetFromMap(new WeakHashMap<>());
@@ -136,6 +150,7 @@ public class WorldOverlay extends Overlay
 		else if (resource != null)
 			color = ResourceSettings.getResourceOutlineColor(config, resource);
 		drawPaths(graphics, view, color);
+		drawGuaranteedDemiDoors(graphics);
 		drawNextObject(graphics, guidance.getNextTarget());
 		TileObject target = guidance.getTarget();
 		if (target != null
@@ -256,6 +271,50 @@ public class WorldOverlay extends Overlay
 		graphics.setStroke(oldStroke);
 	}
 
+	/**
+	 * Guaranteed demi doors: one "Demi room" per unlit doorway into an undiscovered guaranteed demi room, centered on the
+	 * doorway and floating past it in the dark room at about door height. Text only: nothing is drawn on the dark room's
+	 * tiles.
+	 */
+	private void drawGuaranteedDemiDoors(Graphics2D graphics)
+	{
+		if (!config.highlightGuaranteedDemiDoors())
+			return;
+		Font previous = graphics.getFont();
+		graphics.setFont(FontManager.getRunescapeBoldFont());
+		for (DemiDoorway doorway : guidance.getGuaranteedDemiDoorways())
+		{
+			LocalPoint at = findDemiDoorwayLabelPoint(doorway);
+			if (at != null)
+				OutlinedText.draw(graphics, Perspective.getCanvasTextLocation(client, graphics, at, DEMI_DOOR_LABEL, DEMI_DOOR_LABEL_Z),
+						DEMI_DOOR_LABEL, DEMI_DOOR_COLOR);
+		}
+		graphics.setFont(previous);
+	}
+
+	/** The doorway's midpoint, pushed DEMI_DOOR_LABEL_PUSH into the dark room; null when no door has a local point. */
+	static LocalPoint findDemiDoorwayLabelPoint(DemiDoorway doorway)
+	{
+		long x = 0;
+		long y = 0;
+		int count = 0;
+		int worldView = -1;
+		for (TileObject door : doorway.getDoors())
+		{
+			LocalPoint at = door.getLocalLocation();
+			if (at == null)
+				continue;
+			x += at.getX();
+			y += at.getY();
+			worldView = at.getWorldView();
+			count++;
+		}
+		if (count == 0)
+			return null;
+		return new LocalPoint((int) (x / count) + doorway.getDx() * DEMI_DOOR_LABEL_PUSH,
+				(int) (y / count) + doorway.getDy() * DEMI_DOOR_LABEL_PUSH, worldView);
+	}
+
 	/** The current path and, when Next task is on, Next's path; neither has an end-tile marker. */
 	private void drawPaths(Graphics2D graphics, WorldView view, Color color)
 	{
@@ -321,7 +380,7 @@ public class WorldOverlay extends Overlay
 	{
 		if (instruction == null)
 			return null;
-		String rest = instruction.replaceFirst("^(?i)(After opening loop|Opening loop(?: \\d+/\\d+)?|Demi hunting|Demi search): *", "");
+		String rest = PHASE_PREFIX.matcher(instruction).replaceFirst("");
 		if (rest.isEmpty())
 			return instruction;
 		return Character.toUpperCase(rest.charAt(0)) + rest.substring(1);

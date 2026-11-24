@@ -64,14 +64,11 @@ import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.util.ColorUtil;
 
 /**
- * Read-only teal/yellow/gray states over the singing bowl recipe buttons, plain for a wanted recipe left for later
- * though makeable now.
+ * Read-only teal/gray states over the singing bowl recipe buttons; a wanted recipe that isn't crafted this visit is
+ * left plain.
  */
 public class CraftOverlay extends Overlay
 {
-	/** Wanted, but the materials, shards or room aren't there yet (a wanted recipe makeable now is never yellow). */
-	static final Color MISSING = new Color(255, 210, 0);
-	static final Color MISSING_FILL = new Color(255, 210, 0, 35);
 	/** Never crafted this attempt, or already made: dimmed like a disabled button. */
 	static final Color DONE_FILL = new Color(40, 40, 40, 190);
 
@@ -118,7 +115,7 @@ public class CraftOverlay extends Overlay
 		Map<Integer, Integer> live = readHeld(client.getItemContainer(InventoryID.INV));
 		if (live != null && plan.getInventory() != null && !live.equals(plan.getInventory().getHeldItems()))
 			counts.replaceAll((item, count) -> count - Math.max(0, countMade(live, plan.getInventory().getHeldItems(), item)));
-		// Teal: craft now. Yellow: wanted, not makeable yet. Gray: never made or finished.
+		// Teal: craft now. Plain: wanted, not now. Gray: never made or finished.
 		Color color = config.currentActionColor();
 		for (int id = InterfaceID.Skillmulti.A; id <= InterfaceID.Skillmulti.R; id++)
 		{
@@ -134,19 +131,12 @@ public class CraftOverlay extends Overlay
 			int count = counts.getOrDefault(itemId, 0);
 			if (count <= 0)
 			{
-				// A craft just made (marked, now used up) grays out at once rather than turning yellow for a tick.
-				boolean wanted = !counts.containsKey(itemId) && plan.needsCraft(itemId);
-				// Wanted and makeable now but left for later by the shard budget: plain, not yellow.
-				if (wanted && HomeCraftPlan.canFitRecipe(plan.getInventory(), itemId))
+				// A wanted recipe that isn't crafted this visit stays plain; a craft just made (marked, now used up)
+				// grays out at once.
+				if (!counts.containsKey(itemId) && plan.needsCraft(itemId))
 					continue;
-				graphics.setColor(wanted ? MISSING_FILL : DONE_FILL);
+				graphics.setColor(DONE_FILL);
 				graphics.fill(bounds);
-				if (wanted)
-				{
-					graphics.setColor(MISSING);
-					graphics.setStroke(OverlayStrokes.MEDIUM);
-					graphics.draw(bounds);
-				}
 				continue;
 			}
 			graphics.setColor(ColorUtil.colorWithAlpha(color, 45));

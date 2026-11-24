@@ -128,7 +128,13 @@ final class Harvests
 	/** Items gathered so far from node (see trackHarvest). */
 	private int getHarvested(TileObject node)
 	{
-		return harvests.getOrDefault(node.getWorldLocation(), 0);
+		return getHarvested(node.getWorldLocation());
+	}
+
+	/** Items gathered so far from the node at point, for map nodes that aren't loaded (see trackHarvest). */
+	int getHarvested(WorldPoint point)
+	{
+		return harvests.getOrDefault(point, 0);
 	}
 
 	/**

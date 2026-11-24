@@ -34,6 +34,7 @@ import com.gauntlethelper.map.GauntletRoom;
 import com.gauntlethelper.plan.GroundLoot;
 import com.gauntlethelper.plan.Inventory;
 import com.gauntlethelper.plan.OpeningBudget;
+import com.gauntlethelper.plan.Requirement;
 import com.gauntlethelper.plan.Requirements;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -161,7 +162,7 @@ final class TaskPriorities
 
 	private void applyTaskSteps(Requirements plan, Inventory inv, GroundLoot loot, boolean urgent)
 	{
-		if (guidance.isAtHome() || plan.isReady())
+		if (guidance.isAtHome() || plan.isReady() || isSpaceReturnReleased(plan, inv, canReleaseSpaceReturn()))
 			guidance.attempt.clearInventorySpaceReturn();
 		guidance.syncLoot(loot);
 		// Before the steps, from update's target, so they see this tick's demi room (TickContext.isInDemiObjective, the drops).
@@ -255,9 +256,42 @@ final class TaskPriorities
 		return context.route == null || !context.opening.isInitialized() ? Decision.CLAIM_ONLY : null;
 	}
 
+	/**
+	 * Ready for Hunllef: the barrier, except at home with raw fish held, where the range comes first and every raw fish
+	 * is cooked, past the food target too (cookHeldFish). Away from home there is no walk back for them.
+	 */
 	static Decision routeToBarrierWhenReady(TickContext context)
 	{
-		return context.plan.isReady() ? routeToBarrier(context) : null;
+		if (!context.plan.isReady())
+			return null;
+		Decision cook = isCookingBeforeHunllef(context.isAtHome(), context.inv, context.getSecondsLeft()) ? cookHeldFish(context) : null;
+		return cook != null ? cook : routeToBarrier(context);
+	}
+
+	/**
+	 * Past the opening, a free slot lets go of the full-inventory return while a selected weapon upgrade is still missing,
+	 * so the demi hunt comes back; a pickup that fills the bag again latches it again. In the opening, with both upgrades
+	 * held, or once the crystal has been used for the return, it stays latched until home, free slots or not.
+	 */
+	static boolean isSpaceReturnReleased(Requirements plan, Inventory inv, boolean releasable)
+	{
+		return releasable && inv.getFreeSlots() > 0 && !plan.getRow(Requirement.UPGRADES).isComplete();
+	}
+
+	/** The opening is over and the crystal hasn't been used for the return: the slot it leaves while teleporting releases nothing. */
+	private boolean canReleaseSpaceReturn()
+	{
+		return guidance.opening.isInitialized() && !guidance.opening.isActive() && !guidance.attempt.isSpaceReturnTeleported();
+	}
+
+	/**
+	 * Raw fish held at home while the time left allows cooking them: the range is the task, even with the food target
+	 * met, since raw fish can't be eaten against Hunllef. Unknown time (negative) counts as enough. Below
+	 * COOK_RESERVE_SECONDS the barrier wins.
+	 */
+	static boolean isCookingBeforeHunllef(boolean atHome, Inventory inv, int secondsLeft)
+	{
+		return atHome && inv.getHeld(ItemID.GAUNTLET_RAW_FOOD) > 0 && (secondsLeft < 0 || secondsLeft >= COOK_RESERVE_SECONDS);
 	}
 
 	/**
@@ -305,17 +339,22 @@ final class TaskPriorities
 	}
 
 	/**
-	 * The range for raw fish still short of the food target, while the time left allows: raw fish can't be eaten against
-	 * Hunllef, and with an upgrade missing no other step asks for them to be cooked. Null otherwise.
+	 * The range for every raw fish held, past the food target too, while the time left allows: raw fish can't be eaten
+	 * against Hunllef, and with an upgrade missing no other step asks for them to be cooked. Null otherwise.
 	 */
 	private static Decision cookHeldFish(TickContext context)
 	{
-		Inventory inv = context.inv;
-		if (inv.getHeld(ItemID.GAUNTLET_RAW_FOOD) == 0 || inv.getHeld(ItemID.GAUNTLET_FOOD) >= context.plan.getFoodTarget()
-				|| context.getSecondsLeft() < COOK_RESERVE_SECONDS)
+		int raw = context.inv.getHeld(ItemID.GAUNTLET_RAW_FOOD);
+		if (raw == 0 || context.getSecondsLeft() < COOK_RESERVE_SECONDS && context.getSecondsLeft() >= 0)
 			return null;
 		Decision range = context.findServiceTask(ObjectKind.RANGE, false);
-		return range == null ? null : range.withInstruction(ObjectKind.RANGE.label);
+		return range == null ? null : range.withInstruction(formatCookLabel(raw));
+	}
+
+	/** "Cook paddlefish ×n" while more than one raw fish is held. */
+	static String formatCookLabel(int raw)
+	{
+		return raw > 1 ? ObjectKind.RANGE.label + " ×" + raw : ObjectKind.RANGE.label;
 	}
 
 	private static boolean isHomeStationTask(TickContext context)
@@ -328,7 +367,7 @@ final class TaskPriorities
 	/** The walk to the nearest discovered room beside Hunllef's, where a barrier loads; nothing to publish with no such walk. */
 	private static Decision headBesideHunllef(TickContext context)
 	{
-		GauntletRoom boss = context.map.getRoom(3, 3);
+		GauntletRoom boss = context.map.getBossRoom();
 		if (boss == null)
 			return Decision.CLAIM_ONLY;
 		Point current = context.opening.getRoomAt(context.getHere());

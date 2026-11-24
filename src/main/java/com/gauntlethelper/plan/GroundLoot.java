@@ -27,6 +27,7 @@
  */
 
 package com.gauntlethelper.plan;
+
 import com.gauntlethelper.game.ArmorSlot;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -244,7 +245,7 @@ public final class GroundLoot
 
 	/**
 	 * computePickupQuantity for every entry of e's item on e's tile together. Unstacked items are one entry each, so the
-	 * stored fish read "Pick up 1 cooked fish" with 8 on the tile and 7 wanted.
+	 * fish left at home read "Pick up 1 cooked fish" with 8 on the tile and 7 wanted.
 	 */
 	public int computeTilePickupQuantity(Entry e, Requirements plan, Inventory inv, boolean retrieveFood)
 	{
@@ -322,7 +323,7 @@ public final class GroundLoot
 
 	/**
 	 * Whether a needed pile may send the player to another room. A spare crystal is never worth the walk, nor is fish an
-	 * enemy dropped: the fishing spots cover the quota. Stored fish is the final food and stays worth it.
+	 * enemy dropped: the fishing spots cover the quota. Fish left at home are the final food and stay worth it.
 	 */
 	public boolean isWorthRoomTrip(Entry e)
 	{

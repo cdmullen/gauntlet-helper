@@ -103,7 +103,7 @@ public final class OpeningBudget
 	/**
 	 * While a demi upgrade is missing, fish take only the slots nothing else on the hunt needs: each missing upgrade, one
 	 * for a missing frame, a slot per short Grym leaf, one for a material or shard stack not yet started, and the last slot, since a full inventory
-	 * goes home. What doesn't fit waits until after the hunt; the quota stays. At home the fish about to be stored already
+	 * goes home. What doesn't fit waits until after the hunt; the quota stays. At home the fish about to be dropped already
 	 * count as gone, so the departure's Next doesn't change once they are dropped.
 	 */
 	public static int computeHuntFishAllowance(Requirements plan, boolean atHome)
@@ -156,7 +156,7 @@ public final class OpeningBudget
 			if (sim.getPeakSlots() > limit)
 				continue;
 			Simulation.Capacity trip = Simulation.computeCapacity(sim.plan(), sim.snapshot(), true, sim.getStoredRaw(), sim.getStoredCooked());
-			// Storage is at home. Keep real non-food acquisitions feasible.
+			// Fish are dropped at home. Keep real non-food acquisitions feasible.
 			int afterStorage = trip.peakSlots - trip.rawToStore - trip.cookedToStore;
 			if (afterStorage <= Inventory.SIZE || extra == 0)
 				return extra;

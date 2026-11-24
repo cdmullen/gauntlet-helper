@@ -112,8 +112,9 @@ final class OptimizedTrip
 		// door toward it, not at a known node in another edge room.
 		Map<Integer, Integer> gathers = findRoomGathers(forecast, current);
 		Point ring = findRingFrontier(context, current, gathers);
-		boolean edgeTrip = ring != null && isEdgeGather(context, forecast, current);
-		boolean explore = !usefulDemiHere && plan.needsExploration()
+		boolean homeFirst = isHomeWorkFirst(context, forecast, current, gathers);
+		boolean edgeTrip = ring != null && !homeFirst && isEdgeGather(context, forecast, current);
+		boolean explore = !usefulDemiHere && !homeFirst && plan.needsExploration()
 				&& (edgeTrip || TripPlanner.isGatherShortAfterRoom(forecast, plan, context.inv, current));
 		context.setAfterRoomExplore(explore);
 		if (ring != null && explore)
@@ -191,7 +192,8 @@ final class OptimizedTrip
 			return null;
 		// No known spot in reach for a missing fish, grym leaf or other gathered resource: fall through to lighting a
 		// room (steered home by inspectionGoal) instead of a home trip that leaves it short.
-		if (!first.room.equals(current) && (edgeTrip || TripPlanner.isGatherShortHomeTrip(forecast, context.plan, context.inv)))
+		if (!first.room.equals(current) && (edgeTrip || TripPlanner.isGatherShortHomeTrip(forecast, context.plan, context.inv))
+				&& !isHomeWorkFirst(context, forecast, current, findRoomGathers(forecast, current)))
 			return null;
 		context.setTourSummary(forecast.buildSummary());
 		if (first.kind == Simulation.Kind.TELEPORT)
@@ -411,6 +413,57 @@ final class OptimizedTrip
 		for (Requirement resource : Requirement.GATHERED)
 			if (plan.getRow(resource).getMissing() > gathered.getOrDefault(resource.getItemId(), 0))
 				return true;
+		return false;
+	}
+
+	/**
+	 * After the demis, with one gathered resource still short and the forecast's trip home a worthwhile teleport:
+	 * teleport home, do the home work there, then walk out for the resource, when the nearest unopened room to look in
+	 * is more than twice as many rooms from here as from home. Otherwise the walk out from here wins, and the crystal
+	 * brings the player home from there; equal costs walk. With two or more short the search may run on well past that
+	 * room, where the crystal is worth more. It waits until this room's contents have been seen: on the door tile of a
+	 * room just lit its nodes aren't loaded yet.
+	 * gathered counts this room's planned gathers.
+	 */
+	static boolean isHomeWorkFirst(TickContext context, TripPlanner.Result forecast, Point current, Map<Integer, Integer> gathered)
+	{
+		GauntletRoom here = context.map.getRoom(current);
+		if (here == null || !here.hasObservedContents() || countGatherShort(context.plan, gathered) != 1 || !isGatherShortAfterDemis(context.plan, gathered)
+				|| !isTeleportAfterRoom(forecast, current) || !context.isTeleportWorthwhile())
+			return false;
+		List<Point> fromHere = findSearchPath(context, gathered, current, context.findReachableRoomSteps(current)::contains, room -> 0);
+		List<Point> fromHome = findSearchPath(context, gathered, GauntletMap.HOME, room -> true, room -> 0);
+		return fromHere.size() >= 2 && fromHome.size() >= 2 && isHomeWorkFirst(fromHere.size() - 1, fromHome.size() - 1);
+	}
+
+	/**
+	 * Rooms to the search's unopened room from here and from home: going home first walks there and back from home, the
+	 * walk from here goes once and teleports home after.
+	 */
+	static boolean isHomeWorkFirst(int roomsFromHere, int roomsFromHome)
+	{
+		return roomsFromHere > 2 * roomsFromHome;
+	}
+
+	/** How many gathered resources are still short once gathered (item id to quantity) is added. */
+	private static int countGatherShort(Requirements plan, Map<Integer, Integer> gathered)
+	{
+		int count = 0;
+		for (Requirement resource : Requirement.GATHERED)
+			if (plan.getRow(resource).getMissing() > gathered.getOrDefault(resource.getItemId(), 0))
+				count++;
+		return count;
+	}
+
+	/** The forecast's first step past this room's gathers and inventory work is the teleport home. */
+	private static boolean isTeleportAfterRoom(TripPlanner.Result forecast, Point current)
+	{
+		for (TripPlanner.Step step : forecast.steps)
+		{
+			if (step.room.equals(current) && (step.kind == Simulation.Kind.GATHER || step.kind.isInventoryOnly()))
+				continue;
+			return step.kind == Simulation.Kind.TELEPORT;
+		}
 		return false;
 	}
 

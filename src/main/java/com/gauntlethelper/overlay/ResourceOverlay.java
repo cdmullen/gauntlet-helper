@@ -72,8 +72,8 @@ public class ResourceOverlay extends Overlay
 		this.guidance = guidance;
 		this.modelOutlines = modelOutlines;
 		setPosition(OverlayPosition.DYNAMIC);
-		setPriority(PRIORITY_HIGH);
-		setLayer(OverlayLayer.UNDER_WIDGETS);
+		setPriority(PRIORITY_LOW);
+		setLayer(OverlayLayer.ABOVE_SCENE);
 	}
 
 	@Override

@@ -79,8 +79,8 @@ public class BossTileOverlay extends Overlay
 		this.plugin = plugin;
 		this.config = config;
 		setPosition(OverlayPosition.DYNAMIC);
-		setPriority(PRIORITY_HIGH);
-		setLayer(OverlayLayer.UNDER_WIDGETS);
+		setPriority(PRIORITY_LOW);
+		setLayer(OverlayLayer.ABOVE_SCENE);
 	}
 
 	public static Color getPrayerColor(int id)
@@ -130,12 +130,6 @@ public class BossTileOverlay extends Overlay
 			for (int[] tile : TILE_PACK_TILES)
 				points.add(WorldPoint.fromRegion(region, tile[0], tile[1], 1));
 		return points;
-	}
-
-	/** Ground Markers' default look: the fill is the outline color at a fifth of its opacity (50 of 255). */
-	public static Color getMarkerFill(Color color)
-	{
-		return new Color(color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha() * 50 / 255);
 	}
 
 	public static boolean isTornado(int id)
@@ -210,7 +204,6 @@ public class BossTileOverlay extends Overlay
 		Color color = config.hunllefRoomTileMarkerColor();
 		if (color == null)
 			return;
-		Color fill = getMarkerFill(color);
 		Stroke border = OverlayStrokes.MEDIUM;
 		for (WorldPoint template : TILE_PACK)
 			for (WorldPoint point : WorldPoint.toLocalInstance(view, template))
@@ -220,8 +213,16 @@ public class BossTileOverlay extends Overlay
 					continue;
 				Polygon polygon = Perspective.getCanvasTilePoly(client, local);
 				if (polygon != null)
-					OverlayUtil.renderPolygon(graphics, polygon, color, fill, border);
+					drawOutline(graphics, polygon, color, border);
 			}
+	}
+
+	/** Strokes the polygon and fills nothing (OverlayUtil.renderPolygon with a null fill would fill with the outline color). */
+	public static void drawOutline(Graphics2D graphics, Polygon polygon, Color color, Stroke stroke)
+	{
+		graphics.setColor(color);
+		graphics.setStroke(stroke);
+		graphics.draw(polygon);
 	}
 
 	// Reference renderTornadoes copied with local configuration names and the current WorldView lookup.

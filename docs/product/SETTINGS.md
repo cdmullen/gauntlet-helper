@@ -8,7 +8,7 @@ Settings are saved in the `gauntlethelper` config group. Attempt recordings go t
 
 ## Layout
 
-**Setup** is the only section open by default. Every other section has a working default and starts closed. The sections, in order: Setup, Guide, Overlay, Highlights, Inventory and crafting, Trackers, Mapping, Colors, Hunllef, Diagnostics.
+**Setup** is the only section open by default. Every other section has a working default and starts closed. The sections, in order: Setup, Guide, Overlay, Highlights, Inventory and crafting, Trackers, Minimap, Map, Colors, Hunllef, Diagnostics.
 
 Every prep color, the demi-boss colors included, is in Colors. The Hunllef tile colors stay in the Hunllef section.
 
@@ -41,10 +41,11 @@ The current walking route always draws in the world view as a line with no end-t
 | UI setting | Default | Meaning |
 | --- | --- | --- |
 | Tasks overlay (key showTasksOverlay) | On | The prep checklist overlay. Its Next: line follows Guide → Next task |
-| Timers overlay (key showTimersOverlay) | Off | The Gauntlet plugin's movable timer: Preparation time from entering, then grayed Preparation, a running Boss time and a running Total once Hunllef's fight starts. It resets on leaving. Its chat timer is not copied. While on, it also shows Time left under Preparation during prep and sits at the top of the snapped top-left stack. It counts game ticks, so Preparation + Time left = 7:30 in the Corrupted Gauntlet and 10:00 in the regular one |
-| Hide the game's Time Left box (key hideTimeLeftBox) | Off | Hides the game's own Time Left box while you are in the Gauntlet, so the time shows once when the Timers overlay is on. The box comes back when this is off, the plugin stops or you leave. Off, the box stays whatever the Timers overlay does |
+| Map overlay (key showRoomMap) | Off | The room map: a 7x7 map of the dungeon's rooms in the top-left corner during prep, first in the stack, above the timer and the guide panel (drag it to move it). It is drawn only from what the plugin has observed: lit rooms, your room, home and Hunllef's room, and the resources and demi-bosses seen in lit rooms. Unlit rooms show only the fixed layout: the four guaranteed demi-boss rooms red, the other edge and corner rooms orange (borders on the room tiles in the Classic style), the rest unlit; nothing inside an unlit room is ever shown. A lit edge or corner room keeps its red or orange until its contents have been seen; a living demi-boss seen there shows its attack style until it dies, and an empty room or a killed demi-boss shows as a plain lit room. Its look is set in Map |
+| Timers overlay (key showTimersOverlay) | Off | The Gauntlet plugin's movable timer: Preparation time from entering, then grayed Preparation, a running Boss time and a running Total once Hunllef's fight starts. It resets on leaving. Its chat timer is not copied. While on, it also shows Time left under Preparation during prep. In the top-left corner it stacks below the room map and above the guide panel, with other plugins' infoboxes below all three. It counts game ticks, so Preparation + Time left = 7:30 in the Corrupted Gauntlet and 10:00 in the regular one |
+| Hide the game's Time Left box (key hideTimeLeftBox) | Off | Hides the game's own Time Left box during prep and the Hunllef fight, so the time shows once when the Timers overlay is on. The box comes back when this is off, the plugin stops or you leave. Off, the box stays whatever the Timers overlay does |
 
-The time-low hint reads "Time low: finish at home", with "Suggested food target 12" on the next line; with the T2 or T3 Armor goal and an armor upgrade left, "Skip armor upgrades if short" comes between them, and at home the upgrades wait until cooking and the final food are done. The 12 is fixed and only a suggestion. Once the plan is ready for Hunllef (status "Ready for Hunllef"), the time-low hint is no longer shown; the stored-fish expiry hints are unaffected. Teleport break-even estimates use a fixed three-tick crystal activation against two running tiles per tick plus arrival-to-bowl walking.
+The time-low hint reads "Time low: finish at home", with "Suggested food target 12" on the next line; with the T2 or T3 Armor goal and an armor upgrade left, "Skip armor upgrades if short" comes between them, and at home the upgrades wait until cooking and the final food are done. The 12 is fixed and only a suggestion. Once the plan is ready for Hunllef (status "Ready for Hunllef"), the time-low hint is no longer shown; the expiry hints for fish left at home are unaffected. Teleport break-even estimates use a fixed three-tick crystal activation against two running tiles per tick plus arrival-to-bowl walking.
 
 During the opening, resources stay the primary task until the room's needed nodes are satisfied or exhausted. Required doors become current-color Light room tasks only when needed. Other doors get no highlight. Brief boundary movements do not abandon the loop, but a committed move into the center of home or an outside room counts as leaving on purpose. Room resource tours are automatic: they include the known exit or service in the resource order, and the next-task highlight follows the tour.
 
@@ -61,10 +62,11 @@ Current objective labels are Defeat for ordinary mobs and Light room for require
 | Enemies true tiles (key highlightEnemiesTrueTiles) | On | Gray true tiles for all ordinary prep mobs, including the active kill objective. Kept during teleport advice and demi shard coverage |
 | Targeted demi-bosses clickboxes (key highlightTargetedDemiBossesClickboxes) | On | Teal clickbox (2px outline, no fill), with a Defeat caption when Task captions is on, on a living demi whose drop is still needed. None shows while every missing upgrade is on the ground waiting to be picked up. No room floor border, hint arrow, minimap marker or fight information |
 | Demi-bosses true tiles (key highlightDemiBossesTrueTiles) | On | The true tile outline (no fill, 1 pixel) of every living demi in view, needed or not, in its type color, after The Gauntlet plugin's demi outlines. The type colors are in Colors |
+| Guaranteed demi doors (key highlightGuaranteedDemiDoors) | On | One bold soft-red "Demi room" label per unlit doorway from a discovered room into one of the four guaranteed demi rooms while that room is still undiscovered, only while a selected demi upgrade is missing (the opening included). The label is centered on the doorway and floats about a tile past it, at door height, in the dark room; it is text only and stands beside any task caption on the door. It never names a boss; the room's demi is unknown until it is lit. Both Gauntlets |
 | Needed ground items (key highlightNeededGroundItems) | On | Teal item names above live needed piles, with standard stack counts. There are no extra pickup captions |
 | Inventory actions (key highlightInventoryActions) | On | Colored interaction outlines, one color per action (see Colors). Empty vials also show Fill. Also the teleport crystal box while a return home is advised |
-| Droppable items (key highlightDroppableItems) | On | Translucent red filled squares for drops, fish stored at home included. Exact amounts stay in the guide |
-| Singing bowl crafting (key highlightSingingBowlCrafting) | On | Singing bowl menu states. Teal: every recipe this home visit will craft, with its click count under it at home (one affordable needed recipe away from home). Yellow: recipes still wanted but not makeable yet. Dim gray: recipes never or no longer needed. A wanted recipe that is makeable now but left for later by the shard budget stays plain. Nothing is disabled |
+| Droppable items (key highlightDroppableItems) | On | Translucent red filled squares for drops, fish dropped at home included. Exact amounts stay in the guide |
+| Singing bowl crafting (key highlightSingingBowlCrafting) | On | Singing bowl menu states. Teal: every recipe this home visit will craft, with its click count under it at home (one affordable needed recipe away from home). Plain: recipes still wanted but not crafted this visit (not makeable yet, or left for later by the shard budget). Dim gray: recipes never or no longer needed. Nothing is disabled |
 
 Model and tile outlines are 1 pixel, with a tile fill opacity of 50/255. These are fixed. Node colors apply to observed enabled nodes, not just the selected current task. Crafted progress and observed home-food credit affect remaining requirements.
 
@@ -76,20 +78,20 @@ A living demi whose drop is still needed gets a teal clickbox under Targeted dem
 
 | UI setting | Default | Meaning |
 | --- | --- | --- |
-| Reorder ground items (key reorderGroundItems) | On | While teal names are drawn, the Take of an item with a teal name sits above the other Takes, so on a tile with several items a left click takes a needed one first. Every ground item keeps its left-click Take above Walk here, so with only unneeded items (or stored fish before the final step) left, a left click still takes one. Nothing changes outside prep, during a teleport home or with Needed ground items off |
+| Reorder ground items (key reorderGroundItems) | On | While teal names are drawn, the Take of an item with a teal name sits above the other Takes, so on a tile with several items a left click takes a needed one first. Every ground item keeps its left-click Take above Walk here, so with only unneeded items (or fish left at home before the final step) left, a left click still takes one. Nothing changes outside prep, during a teleport home or with Needed ground items off |
 | Keys label for singing bowl recipes (key showKeysLabelForSingingBowlRecipes) | Off | A second line under the singing bowl's scene caption while the bowl is the current task: the bowl menu key for each click this visit, shown from the moment the bowl becomes the task. A key is written once per click, in number order as far as the free inventory slots allow, e.g. "Keys: 2, 2, 3, 4, 5, 7, 7" (two vials, helm, body, legs, basic and attuned staff); a craft with no free slot waits for a later one that frees it. The keys are the menu's fixed layout, never item names, and each weapon and armor piece keeps its key at every tier. Shown only with Task captions on |
 
-Needed item names use Current action color (teal by default). Repeated items share one name per pile, and different item names are spaced vertically. With RuneLite Ground Items enabled, each name is drawn over that item's own Ground Items line, following its spawn order and its hidden, highlighted and Show highlighted items only settings. An item Ground Items hides gets its name above the stack. The helper reads but does not change RuneLite Ground Items settings. Drop squares are red with opacity 80/255, fish stored at home included. Each other inventory interaction has its own outline color, and any unlisted cue uses Current action color. Empty vials are the explicit Fill-caption exception.
+Needed item names use Current action color (teal by default). Repeated items share one name per pile, and different item names are spaced vertically. With RuneLite Ground Items enabled, each name is drawn over that item's own Ground Items line, following its spawn order and its hidden, highlighted and Show highlighted items only settings. An item Ground Items hides gets its name above the stack. The helper reads but does not change RuneLite Ground Items settings. Drop squares are red with opacity 80/255, fish dropped at home included. Each other inventory interaction has its own outline color, and any unlisted cue uses Current action color. Empty vials are the explicit Fill-caption exception.
 
 Vial purchases and dust grinding preserve the full missing attuned-staff and armor shard budget, even while armor materials are missing. The initial gear reserve is 200 shards, reduced by completed held or equipped gear. Dust also preserves the cost of missing vials and requires a complete ten-shard grinding batch. This is automatic.
 
-Every stored (home) raw or cooked ground-fish pickup waits for the final step and requires the total fish quota to be met. Time and expiry warnings do not permit an early pickup. Fish dropped by an enemy is picked up while the quota is short. Droppable items marks the items to drop at home.
+Every pickup of raw or cooked fish left at home waits for the final step and requires the total fish quota to be met. Time and expiry warnings do not permit an early pickup. Fish dropped by an enemy is picked up while the quota is short. Droppable items marks the items to drop at home.
 
 ## Trackers
 
 Every tracker starts as **Infobox**, so needed resources are not listed on the live overlay. Each can independently be overlay, infobox, both or hidden:
 
-- Ore tracker, Bark tracker, Linum tirinum tracker, Shards tracker, Frames tracker and Upgrades tracker (distinct upgrades).
+- Ore tracker, Bark tracker, Linum tirinum tracker, Shards tracker, Frames tracker and Upgrades tracker (weapon upgrades).
 - Grym leaves tracker and Fish tracker (total fish).
 
 | UI setting | Default | Meaning |
@@ -98,7 +100,7 @@ Every tracker starts as **Infobox**, so needed resources are not listed on the l
 
 Vials, dust, cooked fish, potions, armor and perfected weapon types have no infobox and no overlay row. Overlay values show have/requirement. Infobox numbers show the missing quantity. Hiding a tracker does not alter the plan.
 
-## Mapping
+## Minimap
 
 | UI setting | Default | Meaning |
 | --- | --- | --- |
@@ -107,6 +109,21 @@ Vials, dust, cooked fish, potions, armor and perfected weapon types have no info
 | Minimap route line | On | Current walking path clipped to the minimap. Also requires Minimap markers |
 | Demi-boss minimap icons | On | A combat skill icon on each living demi in view (bear attack, dark beast ranged, dragon magic), as in The Gauntlet plugin. Independent of Minimap markers |
 
+## Map
+
+The room map's look. Map overlay (Overlay) turns the map on.
+
+| UI setting | Default | Meaning |
+| --- | --- | --- |
+| Map style (key roomMapStyle) | Classic | Classic: the look of the Gauntlet Map plugin, with its room tiles in a standard overlay panel. Lit rooms are dark, unlit rooms light; your room shows a player marker (with a dotted outline at home), home an hourglass with the same outline and Hunllef's room the boss marker. A demi room whose contents aren't seen yet keeps its ordinary tile (unlit or lit) with a border on the floor's edge: red for the four guaranteed demi rooms, a dim orange for the other edge and corner rooms, sized with Map tile size. A lit room with a living demi-boss shows Gauntlet Map's demi-boss tile with its skill icon (Attack for the bear, Ranged for the dark beast, Magic for the dragon), and fish and grym leaf rooms show its fish and grym leaf tiles, the same in both Gauntlets. In the regular Gauntlet its regular set of the other tiles is used. Simple: plain shapes drawn by the plugin: lit rooms gray-beige with bars for the lit doorways between them, the guaranteed demi rooms filled red and the other edge and corner rooms orange until their contents are seen, a teal crystal on home and a red one on Hunllef's room, and a sword, arrow or orb for a living demi-boss |
+| Map tile size (key gauntletMapTileSize) | 23 px | Size of one room on the room map, 8 to 34 pixels (34 is the Classic tiles' own size), in both styles |
+| Map opacity (key gauntletMapOpacity) | 70% | How solid the room map is, 10 to 100 percent. In both styles only the background (the Classic panel) and the unlit rooms fade; lit rooms, your room, home, Hunllef, the demi room borders, demi-boss and resource marks, lit doorways and the route are always drawn solid, so the game behind the map never changes how a room reads. Classic tiles smaller than 34 px are scaled smoothly, as Gauntlet Map scales them |
+| Show resource icons (key showRoomMapResources) | On | Marks the resources seen in each lit room. Classic style: Gauntlet Map's fish, grym leaf or fish-and-grym-leaf tile on lit rooms with a fishing spot or grym root seen there; your own room shows only your marker unless Show current room resources is on. A lit room with bark, linum tirinum or ore marked shows their item icons instead, with its marked fish and grym leaf, in the room's corners (one icon fills the middle; with five, all are smaller and the fifth takes the middle). Simple style: small squares along the bottom of each lit room, one per marked resource, in the resource's outline color. Which resources stay marked: Hide completed resource icons |
+| Hide completed resource icons (key hideCompletedMapResourceIcons) | On | Hide a resource's room map icons once enough of it is held or crafted for the plan (the same test as Hide completed resource minimap icons, but a separate switch), fish and grym leaves included, in both styles and in your room with Show current room resources; a Classic fish or grym tile then shows the plain lit tile, or the other resource's tile. They reappear if it is needed again. Off: every resource seen stays marked for the whole run. Needs Show resource icons |
+| Show current room resources (key showCurrentRoomResources) | Off | Classic style: the room you are in also shows its fish and grym leaf icons. Your marker moves to the left of the tile at a smaller size and the icons go on the right, so neither covers the other. Needs Show resource icons. The Simple style always shows your room's resources |
+| Current room highlight (key highlightCurrentRoom) | On | Fills the whole room you are in with a light, see-through tint of Current action color (Colors), in both styles, with no outline (outlines mark the task rooms); your marker and the current room's icons still show through it. Standing just in front of Hunllef's barrier, the tint is on home, where your marker is. Off: no tint on your room in either style |
+| Room map route (key showRoomMapRoute) | On | Outlines the current task's room in the current action color and the Next task's room in the Next action color (when Next task is on), with a line along the route to each that ends in an arrowhead of the same color (the Next one smaller), sized with Map tile size. The arrowhead's tip sits just inside the task room's edge, clear of its icons. The line runs only through lit rooms and lit doorways and stops at the first unlit room, with the tip at its door. While the task is lighting a door, the task room is the room that door opens. An unlit room is outlined only if it is a guaranteed demi-boss room or a doorway seen from a lit room leads into it. Nothing is drawn in Hunllef's room. Both styles. The room you are in is left to Current room highlight and is never outlined |
+
 ## Colors
 
 | UI setting | Default | Meaning |
@@ -114,7 +131,7 @@ Vials, dust, cooked fish, potions, armor and perfected weapon types have no info
 | Current action color | RGB 0,220,220 | Current instruction, needed ground item names, the teleport crystal while a return home is advised, unlisted inventory cues |
 | Next action color | RGBA 155,130,105,180 | Next instruction and next-task highlight (a faint gray-orange) |
 | Tracker color | White | Unfinished tracker counts on the overlay and infoboxes. Finished ones turn green |
-| Drop square color | Red 255,0,0, opacity 80 | Finished tools, surplus items and fish stored at home |
+| Drop square color | Red 255,0,0, opacity 80 | Finished tools, surplus items and fish dropped at home |
 | Equip outline color | Green 0,220,0 | Gear to equip |
 | Fill outline color | Light blue 120,190,255 | Empty vials to fill at the water. Also the Fill caption |
 | Mix outline color | Yellow 255,230,0 | Grym leaf + water vial, unfinished potion + dust |
@@ -140,8 +157,8 @@ Vials, dust, cooked fish, potions, armor and perfected weapon types have no info
 | Tornado tile outline width | 1 pixel | 1–2 |
 | Tornado outline color | Yellow | Tornado tile outline |
 | Tornado fill color | Yellow, alpha 50/255 | Translucent tile fill; color and opacity configurable |
-| Hunllef room tile markers | Off | A Ground Markers tile pack built in: the two middle tiles of each side of Hunllef's room (16 template tiles, regions 7512 and 7768, plane 1), 2px outline with Ground Markers' default fill |
-| Hunllef room tile marker color | Yellow 241,255,0 | The pack's color (#FFF1FF00). The fill uses 50/255 of its opacity |
+| Hunllef room tile markers | Off | A Ground Markers tile pack built in: the two middle tiles of each side of Hunllef's room (16 template tiles, regions 7512 and 7768, plane 1), 2px outline, no fill |
+| Hunllef room tile marker color | Yellow 241,255,0 | The outline color of the pack (#FFF1FF00) |
 | Prayer-disable projectile | Original | Draws the orb of Hunllef's prayer-disable attack (Crystalline and Corrupted) as another graphic: Original (the game's own), Crystalline (teal), Corrupted (magenta), Inferno (orange splitter orb), CoX (purple Olm orb), ToB (red Sotetseg orb) or ToA (Wardens bomb). Only the look changes, not the attack. The raid choices reuse those bosses' own projectiles, so the Projectile Override plugin redraws them too when its entry for that boss (Inferno, Olm, Sotetseg or Wardens) is set to anything but Default. Adapted from the Hunllef Projectiles plugin |
 
 The tornado polygon renderer matches The Gauntlet BossOverlay. The original plugin defaults its mode to Off. This helper defaults to True Tile.

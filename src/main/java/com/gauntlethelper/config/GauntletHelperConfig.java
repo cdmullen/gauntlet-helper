@@ -38,6 +38,7 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
+import net.runelite.client.config.Units;
 
 // Sections follow what a new user sets first; only Setup opens by default. Each key is its method's name, built from the
 // label, with a verb first on an on/off setting (show, highlight, hide, ...); renaming one resets its saved value.
@@ -53,7 +54,7 @@ public interface GauntletHelperConfig extends Config
 	@ConfigSection(name = "Guide", description = "Next task, captions and return timing", position = 1, closedByDefault = true)
 	String guideSection = "guide";
 
-	@ConfigSection(name = "Overlay", description = "The prep overlay, its next task line and the timer", position = 2, closedByDefault = true)
+	@ConfigSection(name = "Overlay", description = "The prep overlay, its next task line, the room map and the timer", position = 2, closedByDefault = true)
 	String overlaySection = "overlay";
 
 	@ConfigSection(name = "Highlights", description = "Tasks, resources, enemies, items and the singing bowl", position = 3, closedByDefault = true)
@@ -65,18 +66,23 @@ public interface GauntletHelperConfig extends Config
 	@ConfigSection(name = "Trackers", description = "Where each resource count is shown", position = 5, closedByDefault = true)
 	String trackersSection = "trackers";
 
-	@ConfigSection(name = "Mapping", description = "Minimap markers and route line", position = 6, closedByDefault = true)
+	// The key stays "mapping" from when this section also held the room map, so only its label changed.
+	@ConfigSection(name = "Minimap", description = "Minimap markers, resource icons, route line and demi-boss icons", position = 6,
+			closedByDefault = true)
 	String mappingSection = "mapping";
 
-	@ConfigSection(name = "Colors", description = "Colors for guidance, trackers, inventory cues, resource nodes and demi-bosses", position = 7,
+	@ConfigSection(name = "Map", description = "The room map's style, size, resources, current room and route", position = 7, closedByDefault = true)
+	String mapSection = "map";
+
+	@ConfigSection(name = "Colors", description = "Colors for guidance, trackers, inventory cues, resource nodes and demi-bosses", position = 8,
 			closedByDefault = true)
 	String colorsSection = "colors";
 
-	@ConfigSection(name = "Hunllef", description = "Raw fish entry block, Hunllef, tornado and room tiles, prayer-disable orb", position = 8,
+	@ConfigSection(name = "Hunllef", description = "Raw fish entry block, Hunllef, tornado and room tiles, prayer-disable orb", position = 9,
 			closedByDefault = true)
 	String hunllefSection = "hunllef";
 
-	@ConfigSection(name = "Diagnostics", description = "Attempt recording for bug reports", position = 9, closedByDefault = true)
+	@ConfigSection(name = "Diagnostics", description = "Attempt recording for bug reports", position = 10, closedByDefault = true)
 	String diagnosticsSection = "diagnostics";
 
 	// Setup
@@ -133,13 +139,18 @@ public interface GauntletHelperConfig extends Config
 			description = "Show the prep checklist.", section = overlaySection)
 	default boolean showTasksOverlay() { return true; }
 
+	// The room map's switch; its look is in the Map section.
+	@ConfigItem(keyName = "showRoomMap", name = "Map overlay", position = 1,
+			description = "Show a map of the rooms you have lit, with home, Hunllef and the demi-boss rooms.", section = overlaySection)
+	default boolean showRoomMap() { return false; }
+
 	// The Gauntlet plugin's timer overlay without its chat timer, off by default as there.
-	@ConfigItem(keyName = "showTimersOverlay", name = "Timers overlay", position = 1,
+	@ConfigItem(keyName = "showTimersOverlay", name = "Timers overlay", position = 2,
 			description = "Show prep time, then total time once the Hunllef fight starts.", section = overlaySection)
 	default boolean showTimersOverlay() { return false; }
 
 	// Hiding a game widget gets a switch of its own, so the timer alone never removes game UI.
-	@ConfigItem(keyName = "hideTimeLeftBox", name = "Hide the game's Time Left box", position = 2,
+	@ConfigItem(keyName = "hideTimeLeftBox", name = "Hide the game's Time Left box", position = 3,
 			description = "Hide the game's own Time Left box while in the Gauntlet; the Timers overlay shows the time instead.",
 			section = overlaySection)
 	default boolean hideTimeLeftBox() { return false; }
@@ -181,23 +192,29 @@ public interface GauntletHelperConfig extends Config
 			section = highlightsSection)
 	default boolean highlightDemiBossesTrueTiles() { return true; }
 
-	@ConfigItem(keyName = "highlightNeededGroundItems", name = "Needed ground items", position = 7,
+	@ConfigItem(keyName = "highlightGuaranteedDemiDoors", name = "Guaranteed demi doors", position = 7,
+			description = "Float a \"Demi room\" label past each unlit doorway into the four guaranteed demi-boss rooms "
+					+ "while a demi-boss upgrade is missing.",
+			section = highlightsSection)
+	default boolean highlightGuaranteedDemiDoors() { return true; }
+
+	@ConfigItem(keyName = "highlightNeededGroundItems", name = "Needed ground items", position = 8,
 			description = "Label ground items you need to pick up.",
 			section = highlightsSection)
 	default boolean highlightNeededGroundItems() { return true; }
 
 	// Also covers the teleport crystal box.
-	@ConfigItem(keyName = "highlightInventoryActions", name = "Inventory actions", position = 8,
+	@ConfigItem(keyName = "highlightInventoryActions", name = "Inventory actions", position = 9,
 			description = "Outline items to equip, fill, mix, grind or teleport with.", section = highlightsSection)
 	default boolean highlightInventoryActions() { return true; }
 
-	@ConfigItem(keyName = "highlightDroppableItems", name = "Droppable items", position = 9,
+	@ConfigItem(keyName = "highlightDroppableItems", name = "Droppable items", position = 10,
 			description = "Red squares on items to drop.",
 			section = highlightsSection)
 	default boolean highlightDroppableItems() { return true; }
 
-	@ConfigItem(keyName = "highlightSingingBowlCrafting", name = "Singing bowl crafting", position = 10,
-			description = "Singing bowl menu states: teal for every recipe this home visit crafts, yellow for recipes still wanted, "
+	@ConfigItem(keyName = "highlightSingingBowlCrafting", name = "Singing bowl crafting", position = 11,
+			description = "Singing bowl menu states: teal for every recipe this home visit crafts, plain for recipes wanted later, "
 					+ "dim gray for recipes not needed.",
 			section = highlightsSection)
 	default boolean highlightSingingBowlCrafting() { return true; }
@@ -261,7 +278,7 @@ public interface GauntletHelperConfig extends Config
 			section = trackersSection)
 	default boolean hideCompletedTrackers() { return true; }
 
-	// Mapping
+	// Minimap
 
 	// Also covers the spawn/Hunllef room crystals.
 	@ConfigItem(keyName = "showMinimapMarkers", name = "Minimap markers", position = 0,
@@ -284,6 +301,53 @@ public interface GauntletHelperConfig extends Config
 	@ConfigItem(keyName = "showDemiBossMinimapIcons", name = "Demi-boss minimap icons", position = 3,
 			description = "Show each demi-boss's attack style on the minimap.", section = mappingSection)
 	default boolean showDemiBossMinimapIcons() { return true; }
+
+	// Map
+
+	@ConfigItem(keyName = "roomMapStyle", name = "Map style", position = 0,
+			description = "Classic draws the rooms with the Gauntlet Map plugin's tiles; Simple draws plain shapes.",
+			section = mapSection)
+	default RoomMapStyle roomMapStyle() { return RoomMapStyle.GAUNTLET_MAP; }
+
+	// One size and opacity for both styles; the Classic tiles stop at their own 34 px.
+	@Range(min = 8, max = 34)
+	@Units(Units.PIXELS)
+	@ConfigItem(keyName = "gauntletMapTileSize", name = "Map tile size", position = 1,
+			description = "Size of one room on the room map.", section = mapSection)
+	default int gauntletMapTileSize() { return 23; }
+
+	@Range(min = 10, max = 100)
+	@Units(Units.PERCENT)
+	@ConfigItem(keyName = "gauntletMapOpacity", name = "Map opacity", position = 2,
+			description = "How solid the room map is. Only the background and the unlit rooms fade; lit rooms and marks stay solid.",
+			section = mapSection)
+	default int gauntletMapOpacity() { return 70; }
+
+	// The Classic style marks fish and grym leaf rooms with their tiles, as Gauntlet Map does, and bark, linum tirinum
+	// and ore rooms with the client's item icons.
+	@ConfigItem(keyName = "showRoomMapResources", name = "Show resource icons", position = 3,
+			description = "Mark the resources seen in each lit room on the room map.", section = mapSection)
+	default boolean showRoomMapResources() { return true; }
+
+	// Same completion test as Hide completed resource minimap icons, separate switch.
+	@ConfigItem(keyName = "hideCompletedMapResourceIcons", name = "Hide completed resource icons", position = 4,
+			description = "Hide a resource's room map icons once you have enough. They return if needed again. Needs Show resource icons.",
+			section = mapSection)
+	default boolean hideCompletedMapResourceIcons() { return true; }
+
+	@ConfigItem(keyName = "showCurrentRoomResources", name = "Show current room resources", position = 5,
+			description = "Also show the resources of the room you are in, beside your marker. Needs Show resource icons.",
+			section = mapSection)
+	default boolean showCurrentRoomResources() { return false; }
+
+	@ConfigItem(keyName = "highlightCurrentRoom", name = "Current room highlight", position = 6,
+			description = "Fill the room you are in on the room map with a light tint of the current action color.", section = mapSection)
+	default boolean highlightCurrentRoom() { return true; }
+
+	@ConfigItem(keyName = "showRoomMapRoute", name = "Room map route", position = 7,
+			description = "Outline the current and next task's rooms on the room map, with an arrowed route to them through lit rooms.",
+			section = mapSection)
+	default boolean showRoomMapRoute() { return true; }
 
 	// Colors
 

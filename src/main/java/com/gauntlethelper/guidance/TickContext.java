@@ -154,8 +154,12 @@ final class TickContext
 		TileObject getToolStorage();
 		boolean hasHomeShortcut(Point room);
 		Map<ObjectKind, Integer> countSurelyIn(Requirements plan, Point room);
+		int getHarvested(WorldPoint node);
+		boolean isReturningHome();
 
-		// Hand-overs from a converted step to classes not converted yet, which write GuidanceState themselves.
+		// Hand-overs that write GuidanceState at decision time: RoomTour reads the tour goal, exits and where the room's
+		// tour ends while the steps still run, and gatherCurrentRoom runs RoomTour itself. RoomTour stays a GuidanceState
+		// writer, so this is the interface's final shape.
 		void setTourGoal(Point room);
 		void setAfterRoomExplore(boolean explore);
 		void setTourExits(Point room, Set<Point> exits);
@@ -228,7 +232,7 @@ final class TickContext
 		return inDemiObjective;
 	}
 
-	/** The final stored-fish pickup is open (Requirements.isReadyForStoredFood). */
+	/** The final pickup of the fish left at home is open (Requirements.isReadyForStoredFood). */
 	boolean retrieveFood()
 	{
 		locatePlayer();
@@ -359,6 +363,10 @@ final class TickContext
 	boolean hasHomeShortcut(Point room) { return reads.hasHomeShortcut(room); }
 	/** What this room's useful nodes surely still give, by kind; the caller may add to the map. */
 	Map<ObjectKind, Integer> countSurelyIn(Point room) { return reads.countSurelyIn(plan, room); }
+	/** Items gathered so far from the map node at point. */
+	int getHarvested(WorldPoint node) { return reads.getHarvested(node); }
+	/** A home return is latched: full inventory, a home trip, or a staff or trip teleport under way. */
+	boolean isReturningHome() { return reads.isReturningHome(); }
 
 	/** Tours and exits this tick aim at this room and the map shows it, until a pause clears it. */
 	void setTourGoal(Point room) { reads.setTourGoal(room); }
@@ -497,7 +505,11 @@ final class TickContext
 		public Decision findStationTask(ObjectKind station) { return guidance.routing.findStationTask(station); }
 
 		@Override
-		public void setTourGoal(Point room) { guidance.targeting.inspectionGoal = room; }
+		public void setTourGoal(Point room)
+		{
+			guidance.targeting.inspectionGoal = room;
+			guidance.targeting.goalIsWalk = false;
+		}
 
 		@Override
 		public void setAfterRoomExplore(boolean explore) { guidance.targeting.afterRoomExplore = explore; }
@@ -664,5 +676,11 @@ final class TickContext
 
 		@Override
 		public Map<ObjectKind, Integer> countSurelyIn(Requirements plan, Point room) { return guidance.harvests.countSurelyIn(plan, room); }
+
+		@Override
+		public int getHarvested(WorldPoint node) { return guidance.harvests.getHarvested(node); }
+
+		@Override
+		public boolean isReturningHome() { return guidance.isReturningHome(); }
 	}
 }

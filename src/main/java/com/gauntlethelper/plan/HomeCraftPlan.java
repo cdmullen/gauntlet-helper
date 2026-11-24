@@ -111,7 +111,6 @@ public final class HomeCraftPlan
 		for (ArmorUpgrades.Step step : armorSteps)
 			append(step.itemId, step.label);
 		// A held upgrade component means the hunt found it: finish that weapon before vials, cooking or filling.
-		int weaponReserve = 0;
 		for (WeaponType type : upgradeTypes)
 		{
 			int basic = type.getItem(Tier.BASIC);
@@ -124,14 +123,11 @@ public final class HomeCraftPlan
 			if (forecast.getOwned(attuned) == 0)
 				append(attuned, "Attuned " + type.getLabel());
 			append(perfected, "Perfected " + type.getLabel());
-			// Keep the attuned-tier shards away from vials; the opening staff's are already in the gear reserve.
-			if (forecast.getOwned(attuned) + forecast.getOwned(perfected) == 0 && !(type == WeaponType.STAFF && needStaff))
-				weaponReserve += ATTUNE_SHARDS;
 		}
+		// A weapon the shards couldn't attune keeps its attuned-tier shards away from vials (the same check as
+		// Requirements.addCrafts, so the bowl task and its marked recipe agree).
 		int count = 0;
-		while (count < missingVials && PotionShardBudget.canBuyVial(forecast, needStaff, baseArmorGoal)
-				&& forecast.getHeld(GAUNTLET_CRYSTAL_SHARD_HM)
-				>= PotionShardBudget.computeGearReserve(forecast, needStaff, baseArmorGoal) + weaponReserve + Recipes.SHARDS_PER_VIAL
+		while (count < missingVials && PotionShardBudget.canBuyVial(forecast, needStaff, baseArmorGoal, upgradeTypes)
 				&& append(GAUNTLET_VIAL_EMPTY_HM, "Crystal vial (" + (missingVials - count) + " needed)"))
 			count++;
 		baseArmorDone = ArmorUpgrades.owned(forecast).isComplete(baseArmorGoal) && isStaffReadyAfter(needStaff);
@@ -355,7 +351,7 @@ public final class HomeCraftPlan
 		return ordered;
 	}
 
-	/** Crafts the shards and materials allow but the free slots don't yet: cooking and storing fish first helps. */
+	/** Crafts the shards and materials allow but the free slots don't yet: cooking and dropping fish first helps. */
 	public int countWaitingForSpace() { return wanted.size() - planned.size(); }
 
 	/** How many of this item the visit's plan crafts (vials repeat, one entry each). */

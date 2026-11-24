@@ -110,6 +110,8 @@ public class Guidance
 	final List<TileObject> barriers = new ArrayList<>();
 	/** Set each update: standing at home with a bowl craft available, so filling vials waits. */
 	private boolean craftBeforeWater;
+	/** Unlit doorways into a guaranteed demi room not discovered yet, while a selected demi upgrade is missing; set each tick. */
+	private List<DemiDoorway> guaranteedDemiDoorways = Collections.emptyList();
 	final GuidanceLog guidanceLog = new GuidanceLog(this, targeting);
 	final MapObserver mapObserver = new MapObserver(this);
 	final OpeningSetup orientation = new OpeningSetup(this);
@@ -130,6 +132,7 @@ public class Guidance
 	public void reset()
 	{
 		homeVisit = null;
+		guaranteedDemiDoorways = Collections.emptyList();
 		lastLoot = null;
 		attempt.reset();
 		perimeter.reset();
@@ -170,7 +173,7 @@ public class Guidance
 	 *   6. observe whether the player is home, and limit the first home visit's crafts
 	 *   7. hold the door shown
 	 * applyGuidance:
-	 *   8. home space (cook, store, craft or fill before a constrained departure), else
+	 *   8. home space (cook, drop fish, craft or fill before a constrained departure), else
 	 *   9. the task steps, which may replace the default task (TaskPriorities.taskSteps, first claim wins), the
 	 *      demi-room cue and Next (NextTask.NEXT_STEPS, first NextDecision wins)
 	 *  10. the sceptre, over the task published so far: recover a missing one (a Decision replacing a Light room task),
@@ -216,6 +219,10 @@ public class Guidance
 		publishSceptreCue(priorities.sceptre.chooseCue(context), inv, advice);
 		// After the task steps, so the next update holds the door actually shown rather than update's own first choice.
 		holdShownDoor();
+		// Only the Guaranteed demi doors labels read these; a config change runs this again, so turning it on shows them at once.
+		boolean labeled = config != null && config.highlightGuaranteedDemiDoors();
+		guaranteedDemiDoorways = !labeled || plan.getRow(Requirement.UPGRADES).isComplete() ? Collections.emptyList()
+				: List.copyOf(routing.findGuaranteedDemiDoorways());
 	}
 
 	private static void publishSceptreCue(Sceptre.Cue cue, Inventory inv, InventoryAdvice advice)
@@ -449,7 +456,6 @@ public class Guidance
 		next.update(plan);
 	}
 
-
 	public boolean isTeleportWorthwhile()
 	{
 		return priorities.homeSpace.isTeleportWorthwhile();
@@ -457,6 +463,7 @@ public class Guidance
 
 	public void observeCrystalUsed(Requirements plan)
 	{
+		attempt.markSpaceReturnTeleported();
 		priorities.homeSpace.observeCrystalUsed(plan);
 	}
 
@@ -538,7 +545,7 @@ public class Guidance
 		return resource != Requirement.FISH || attempt.getFishAllowance() > 0;
 	}
 
-	/** Enemy-dropped fish follow the same fish allowance as fishing spots; stored fish keep their own gate. */
+	/** Enemy-dropped fish follow the same fish allowance as fishing spots; fish left at home keep their own gate. */
 	public boolean isLootAllowed(GroundLoot loot, GroundLoot.Entry entry)
 	{
 		return !GroundLoot.isFood(entry.id) || loot.isStoredFood(entry) || isResourceEligible(Requirement.FISH);
@@ -549,6 +556,17 @@ public class Guidance
 	public GauntletMap getGauntletMap() { return gauntletMap; }
 	public OpeningRoute getOpening() { return opening; }
 	public List<TileObject> getBarriers() { return barriers; }
+	/** Doorways for the Guaranteed demi doors labels: unlit, into an undiscovered guaranteed demi room, while an upgrade is missing and the setting is on. */
+	public List<DemiDoorway> getGuaranteedDemiDoorways() { return guaranteedDemiDoorways; }
+
+	/** Every door of getGuaranteedDemiDoorways. */
+	public List<TileObject> getGuaranteedDemiDoors()
+	{
+		List<TileObject> doors = new ArrayList<>();
+		for (DemiDoorway doorway : guaranteedDemiDoorways)
+			doors.addAll(doorway.getDoors());
+		return doors;
+	}
 	public PerimeterSearch getPerimeter() { return perimeter; }
 	public int getFishAllowance() { return attempt.getFishAllowance(); }
 	/** This update's task heads home. */
@@ -564,12 +582,18 @@ public class Guidance
 	public TileObject getToolStorage() { return toolStorage; }
 	public Map<TileObject, ObjectKind> getObjects() { return Collections.unmodifiableMap(objects); }
 
+	/** Ready for Hunllef, but at home with raw fish to cook first (TaskPriorities.routeToBarrierWhenReady). */
+	public boolean isCookingBeforeHunllef(Requirements plan)
+	{
+		return plan != null && plan.isReady() && TaskPriorities.isCookingBeforeHunllef(isAtHome(), plan.getInventory(), planningSeconds);
+	}
+
 	public String getPhaseLabel(Requirements plan)
 	{
 		if (plan == null)
 			return "Waiting for preparation";
 		if (plan.isReady())
-			return "Ready for Hunllef";
+			return isCookingBeforeHunllef(plan) ? "Final preparation" : "Ready for Hunllef";
 		if (isReturningHome())
 			return "Returning home";
 		if (!opening.isInitialized())
@@ -595,15 +619,15 @@ public class Guidance
 	}
 
 	/**
-	 * At home the pump is the current task: filling comes before cooking and storing fish
+	 * At home the pump is the current task: filling comes before cooking and dropping fish
 	 * (HomeSpace.prepareHomeSpace).
 	 */
 	public boolean shouldFillBeforeStorage() { return isAtHome() && targeting.targetKind == ObjectKind.WATER; }
 
-	/** At home, cooking and storing fish comes before the bowl because crafts wait for slots. */
+	/** At home, cooking and dropping fish comes before the bowl because crafts wait for slots. */
 	public boolean shouldStoreBeforeCrafting() { return isAtHome() && priorities.homeSpace.shouldStoreBeforeCrafting(); }
 
-	/** The full-inventory trip home will cook and store before the bowl. */
+	/** The full-inventory trip home will cook and drop fish before the bowl. */
 	public boolean isFullReturnStorageFirst() { return priorities.homeReturns.isFullReturnStorageFirst(); }
 
 	/** Client-thread inspection accessors. */
@@ -628,7 +652,11 @@ public class Guidance
 			return gauntletMap.getRoom(opening.getRoomAt(at));
 		}
 		if (targeting.inspectionGoal != null)
-			return gauntletMap.getRoom(targeting.inspectionGoal);
+		{
+			// A tour goal only steers which door lights: while a Light room door is the task, the map shows the room it opens.
+			GauntletRoom opened = targeting.goalIsWalk ? null : findRoomOpenedByDoor(current);
+			return opened != null ? opened : gauntletMap.getRoom(targeting.inspectionGoal);
+		}
 		if (kind != null && kind.isDoorway() && opening.isActive())
 			return gauntletMap.getRoom(orientation.isFirstRoomFocus() ? orientation.getFirstRoom() : opening.getNextRoom());
 		if (targeting.targetKind == ObjectKind.PASSAGE && !targeting.path.isEmpty())
@@ -639,16 +667,71 @@ public class Guidance
 				return gauntletMap.getRoom(opening.getRoomAt(view.getBaseX() + end.getX(), view.getBaseY() + end.getY()));
 		}
 		if (targeting.targetKind == ObjectKind.DOOR && targeting.target != null)
+			return findRoomAcross(current, targeting.target.getWorldLocation());
+		return null;
+	}
+
+	/**
+	 * The room the task's Light room door opens: of the two rooms whose shared boundary the door stands beside, the
+	 * unlit one, or the one the player isn't in when both or neither are lit. Null with no such door.
+	 */
+	private GauntletRoom findRoomOpenedByDoor(GauntletRoom current)
+	{
+		if (targeting.targetKind != ObjectKind.DOOR || targeting.target == null)
+			return null;
+		WorldPoint door = targeting.target.getWorldLocation();
+		Point at = opening.getRoomAt(door);
+		for (GauntletRoom.Direction direction : GauntletRoom.Direction.values())
 		{
-			Point relative = gauntletMap.getRelative(current);
-			Point center = opening.getRoomCenter(relative);
-			WorldPoint door = targeting.target.getWorldLocation();
-			int dx = door.getX() - center.getX(), dy = door.getY() - center.getY();
-			return gauntletMap.getRoom(new Point(relative.getX()
-					+ (Math.abs(dx) > Math.abs(dy) ? Integer.signum(dx) : 0),
-					relative.getY() + (Math.abs(dy) >= Math.abs(dx) ? Integer.signum(dy) : 0)));
+			Point beyond = new Point(at.getX() + direction.getDx(), at.getY() + direction.getDy());
+			GauntletRoom near = gauntletMap.getRoom(at);
+			GauntletRoom far = gauntletMap.getRoom(beyond);
+			if (near == null || far == null || !SceneGeometry.isNearBoundary(door, opening.getBoundary(at, beyond)))
+				continue;
+			if (near.isDiscovered() != far.isDiscovered())
+				return near.isDiscovered() ? far : near;
+			return near.equals(current) ? far : near;
 		}
 		return null;
+	}
+
+	/** The room on the far side of a door of the given room: the side the door lies on from the room's center. */
+	private GauntletRoom findRoomAcross(GauntletRoom room, WorldPoint door)
+	{
+		Point relative = gauntletMap.getRelative(room);
+		Point center = opening.getRoomCenter(relative);
+		int dx = door.getX() - center.getX(), dy = door.getY() - center.getY();
+		return gauntletMap.getRoom(new Point(relative.getX()
+				+ (Math.abs(dx) > Math.abs(dy) ? Integer.signum(dx) : 0),
+				relative.getY() + (Math.abs(dy) >= Math.abs(dx) ? Integer.signum(dy) : 0)));
+	}
+
+	/**
+	 * The room of the Next task, for the room map: its enemy's or object's room, the room a Next "Light room" door
+	 * opens, or else the room where the Next path ends; null with no Next task.
+	 */
+	public GauntletRoom getNextMapRoom()
+	{
+		if (getCurrentMapRoom() == null || !gauntletMap.isInitialized())
+			return null;
+		if (targeting.nextEnemy != null)
+			return gauntletMap.getRoom(opening.getRoomAt(targeting.nextEnemy.getWorldLocation()));
+		if (targeting.nextTarget != null)
+		{
+			WorldPoint at = targeting.nextTarget.getWorldLocation();
+			GauntletRoom room = gauntletMap.getRoom(opening.getRoomAt(at));
+			if (targeting.nextKind == ObjectKind.DOOR && room != null)
+				return findRoomAcross(room, at);
+			if (targeting.nextKind == null || !targeting.nextKind.isDoorway())
+				return room;
+		}
+		if (targeting.nextPath.isEmpty())
+			return null;
+		Point end = targeting.nextPath.get(targeting.nextPath.size() - 1);
+		WorldView view = client.getTopLevelWorldView();
+		if (view == null)
+			return null;
+		return gauntletMap.getRoom(opening.getRoomAt(view.getBaseX() + end.getX(), view.getBaseY() + end.getY()));
 	}
 
 	/**

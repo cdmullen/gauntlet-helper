@@ -55,6 +55,30 @@ import net.runelite.api.coords.WorldPoint;
  */
 public final class Routing
 {
+	/**
+	 * Tiles added to a doorway's door further from spawn during the opening loop. The doors of one doorway are 3 tiles
+	 * apart, so the inner one is always lit (the outer one opens the same doorway but looks like a detour).
+	 */
+	static final int OUTER_DOOR_COST = 4;
+
+	/**
+	 * Tiles the other door of a doorway must save before the highlight moves off the door lit last update. Diagonal
+	 * steps make the doorway's two doors tie often, so the highlight would flicker between them.
+	 */
+	static final int DOOR_SWITCH_COST = 2;
+
+	/**
+	 * Tiles another door must save before exploration's highlight moves off the door shown last update (half a room;
+	 * DefaultTask.keepHeldDoor). Walking off toward a different door still moves it within a tick or two.
+	 */
+	static final int DOOR_KEEP_MARGIN = 8;
+
+	/** Rooms a crossing chain may run through before the path stops (the 7x7 grid is at most 12 rooms across). */
+	private static final int MAX_CROSSINGS = 12;
+
+	/** The four room steps: east, west, north, south. Never written. */
+	private static final int[][] ROOM_STEPS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
 	private final Guidance guidance;
 	private final GuidanceState targeting;
 
@@ -69,6 +93,60 @@ public final class Routing
 	{
 		candidates.add(object);
 		return candidates.size() - 1;
+	}
+
+	/**
+	 * Unlit doors on the edge of a discovered room into one of the four guaranteed demi rooms not discovered yet. The
+	 * guaranteed rooms are fixed public layout, so nothing about the dark room itself is read.
+	 */
+	List<TileObject> findGuaranteedDemiDoors()
+	{
+		List<TileObject> doors = new ArrayList<>();
+		for (DemiDoorway doorway : findGuaranteedDemiDoorways())
+			doors.addAll(doorway.getDoors());
+		return doors;
+	}
+
+	/**
+	 * The doors of findGuaranteedDemiDoors grouped by doorway, each with the direction into the dark room. A boundary
+	 * has one doorway, whose two halves stand on either side of a two-tile gap, so every door found at a boundary is
+	 * one doorway.
+	 */
+	List<DemiDoorway> findGuaranteedDemiDoorways()
+	{
+		if (!guidance.opening.isInitialized() || !guidance.gauntletMap.isInitialized())
+			return Collections.emptyList();
+		WorldView view = guidance.client.getTopLevelWorldView();
+		if (view == null)
+			return Collections.emptyList();
+		List<DemiDoorway> doorways = new ArrayList<>();
+		for (GauntletRoom demi : guidance.gauntletMap.getRooms())
+		{
+			if (!demi.isGuaranteedDemiSpawn() || demi.isDiscovered())
+				continue;
+			Point to = guidance.gauntletMap.getRelative(demi);
+			for (int[] delta : ROOM_STEPS)
+			{
+				Point from = new Point(to.getX() + delta[0], to.getY() + delta[1]);
+				GauntletRoom room = guidance.gauntletMap.getRoom(from);
+				if (room == null || !room.isDiscovered())
+					continue;
+				Point boundary = guidance.opening.getBoundary(from, to);
+				List<TileObject> doors = new ArrayList<>();
+				for (Map.Entry<TileObject, ObjectKind> entry : guidance.objects.entrySet())
+				{
+					TileObject object = entry.getKey();
+					if (entry.getValue() != ObjectKind.DOOR || object.getPlane() != view.getPlane()
+							|| !SceneGeometry.isNearBoundary(object.getWorldLocation(), boundary)
+							|| guidance.isOpenPassage(object, ObjectKind.DOOR))
+						continue;
+					doors.add(object);
+				}
+				if (!doors.isEmpty())
+					doorways.add(new DemiDoorway(doors, -delta[0], -delta[1]));
+			}
+		}
+		return doorways;
 	}
 
 	/** The index of object in candidates, adding it first when it is not there yet. */
@@ -205,6 +283,7 @@ public final class Routing
 	boolean routeToRoom(LocalPathfinder route, WorldView view, Player player, Point destination, ObjectKind service, Point step)
 	{
 		targeting.inspectionGoal = destination;
+		targeting.goalIsWalk = true;
 		WorldPoint here = player.getWorldLocation();
 		Point current = guidance.opening.getRoomAt(here);
 		if (!current.equals(destination)
@@ -294,9 +373,6 @@ public final class Routing
 			return " (waiting for a reachable doorway or singing bowl)";
 		return service == ObjectKind.RANGE ? " (waiting for a reachable doorway or range)" : " (waiting for a reachable doorway)";
 	}
-
-	/** Rooms a crossing chain may run through before the path stops (the 7x7 grid is at most 12 rooms across). */
-	private static final int MAX_CROSSINGS = 12;
 
 	/**
 	 * A doorway crossing ends two tiles into `room`. Carry the path on to that room's next stop instead:
@@ -701,12 +777,15 @@ public final class Routing
 	/**
 	 * A door on the way can be lit: a sceptre is held or worn, or one lies dropped within reach with a slot to pick it
 	 * up (Sceptre.findNearbySceptre), which the sceptre recovery then does first. Otherwise a dropped sceptre would
-	 * send the walk home the long way round while it lies a few tiles away.
+	 * send the walk home the long way round while it lies a few tiles away. Not a sceptre dropped on the drop cue:
+	 * the cue said no room is left to light, so the way home doesn't send the player back for it.
 	 */
 	boolean canLightDoor(Inventory inv)
 	{
 		if (Guidance.hasSceptre(inv))
 			return true;
+		if (guidance.priorities.sceptre.isDropCued())
+			return false;
 		return Sceptre.findNearbySceptre(guidance.lastLoot, inv, guidance.client.getTopLevelWorldView(), targeting.lastRoute) != null;
 	}
 
@@ -727,6 +806,7 @@ public final class Routing
 			if (!isOpenInto(rooms.get(i - 1), room))
 				return false;
 			targeting.inspectionGoal = destination;
+		targeting.goalIsWalk = true;
 			if (guidance.tour.gatherRoom(plan, targeting.lastRoute, view, room))
 			{
 				guidance.attempt.setInstruction(gatherPrefix + targeting.targetKind.label);
@@ -737,8 +817,8 @@ public final class Routing
 	}
 
 	/**
-	 * Where a trip home ends: the bowl while a recipe is available, else the range when fish are held to cook or store
-	 * (never the bowl under a cooking instruction or with nothing to craft), and the range when storage goes before the
+	 * Where a trip home ends: the bowl while a recipe is available, else the range when fish are held to cook or drop
+	 * (never the bowl under a cooking instruction or with nothing to craft), and the range when the fish drop goes before the
 	 * bowl. With neither, the trip ends just inside home and the next task takes over.
 	 */
 	private ObjectKind getHomeFacility(Requirements plan)
@@ -808,7 +888,7 @@ public final class Routing
 	private Set<Point> computeReachableRoomSteps(Point current)
 	{
 		Set<Point> reachable = new HashSet<>();
-		for (int[] delta : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}})
+		for (int[] delta : ROOM_STEPS)
 		{
 			Point room = new Point(current.getX() + delta[0], current.getY() + delta[1]);
 			Point boundary = guidance.opening.getBoundary(current, room);
@@ -859,12 +939,6 @@ public final class Routing
 	}
 
 	/**
-	 * Tiles added to a doorway's door further from spawn during the opening loop. The doors of one doorway are 3 tiles
-	 * apart, so the inner one is always lit (the outer one opens the same doorway but looks like a detour).
-	 */
-	static final int OUTER_DOOR_COST = 4;
-
-	/**
 	 * During the opening loop, true when the doorway's other door is nearer spawn along the wall. Doorways of the
 	 * spawn room itself are left to the nearer door.
 	 */
@@ -891,18 +965,6 @@ public final class Routing
 		}
 		return false;
 	}
-
-	/**
-	 * Tiles the other door of a doorway must save before the highlight moves off the door lit last update. Diagonal
-	 * steps make the doorway's two doors tie often, so the highlight would flicker between them.
-	 */
-	static final int DOOR_SWITCH_COST = 2;
-
-	/**
-	 * Tiles another door must save before exploration's highlight moves off the door shown last update (half a room;
-	 * DefaultTask.keepHeldDoor). Walking off toward a different door still moves it within a tick or two.
-	 */
-	static final int DOOR_KEEP_MARGIN = 8;
 
 	/** True when door is a different door of the same doorway as held (the doors of one doorway are side by side). */
 	static boolean isDoorSwitch(TileObject held, TileObject door)
