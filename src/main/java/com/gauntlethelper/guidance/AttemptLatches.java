@@ -43,6 +43,8 @@ final class AttemptLatches
 	// updates until home (or ready); the others are decided afresh each update.
 	private boolean atHome;
 	private boolean inventorySpaceReturn;
+	/** The crystal was used for the space return: the slot it leaves doesn't release the return. */
+	private boolean spaceReturnTeleported;
 	private boolean homeReturn;
 	private boolean staffReturn;
 	private boolean tripTeleport;
@@ -77,6 +79,7 @@ final class AttemptLatches
 	{
 		atHome = false;
 		inventorySpaceReturn = false;
+		spaceReturnTeleported = false;
 		homeReturn = false;
 		staffReturn = false;
 		tripTeleport = false;
@@ -114,6 +117,7 @@ final class AttemptLatches
 
 	boolean isAtHome() { return atHome; }
 	boolean isInventorySpaceReturn() { return inventorySpaceReturn; }
+	boolean isSpaceReturnTeleported() { return spaceReturnTeleported; }
 	boolean isHomeReturn() { return homeReturn; }
 	boolean isStaffReturn() { return staffReturn; }
 	boolean isTripTeleport() { return tripTeleport; }
@@ -125,7 +129,14 @@ final class AttemptLatches
 	void observeHome(boolean home) { atHome = home; }
 	void clearAtHome() { atHome = false; }
 	void latchInventorySpaceReturn() { inventorySpaceReturn = true; }
-	void clearInventorySpaceReturn() { inventorySpaceReturn = false; }
+	void markSpaceReturnTeleported() { spaceReturnTeleported = inventorySpaceReturn; }
+
+	void clearInventorySpaceReturn()
+	{
+		inventorySpaceReturn = false;
+		spaceReturnTeleported = false;
+	}
+
 	void startHomeReturn() { homeReturn = true; }
 	void startStaffReturn() { staffReturn = true; }
 	void startTripTeleport() { tripTeleport = true; }

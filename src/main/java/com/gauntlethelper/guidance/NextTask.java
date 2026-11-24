@@ -365,7 +365,7 @@ final class NextTask
 	}
 
 	/**
-	 * Cooking and storing at the range is the last home task before the hunt leaves: Next is the first door to light
+	 * Cooking and dropping fish at the range is the last home task before the hunt leaves: Next is the first door to light
 	 * toward the outward room, with its path from the range.
 	 */
 	void previewDeparture(Requirements plan)

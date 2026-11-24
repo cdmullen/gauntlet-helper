@@ -183,14 +183,19 @@ public final class DemiBossPlan
 		if (drops.isEmpty())
 			return "Check " + name + " for missing alternate upgrade";
 		Set<WeaponType> wanted = findCommon(drops, computeMissingUpgrades());
-		return wanted.isEmpty() ? "Check " + name + " room" : "Check " + name + " room for " + describeComponents(wanted);
+		if (wanted.isEmpty())
+			return "Check " + name + " room";
+		if (wanted.size() < drops.size())
+			return "Check " + name + " room for a chance at the " + describeComponents(wanted);
+		return "Check " + name + " room for " + describeComponents(wanted);
 	}
 
 	/**
 	 * In-room cue for the chosen living demi: "Defeat bear and collect spike". A repeat kill, or one whose own
 	 * component is already owned, drops one of the components not yet received other than its own, so every wanted
-	 * possibility is listed, e.g. "orb/bowstring". A drop that isn't wanted is not named: a first dark beast with the
-	 * spike held for staff + either is just "Defeat dark beast", killed so the next one drops the orb.
+	 * possibility is listed, e.g. "orb/bowstring". When the kill may drop one that isn't wanted instead, the cue doesn't
+	 * promise the wanted one: "Defeat bear for a chance at the orb". A demi none of whose drops is wanted is just
+	 * "Defeat dark beast": a first dark beast with the spike held for staff + either, killed so the next one drops the orb.
 	 */
 	public String getObjective(GauntletRoom room)
 	{
@@ -202,7 +207,11 @@ public final class DemiBossPlan
 		if (drops.isEmpty())
 			return "Defeat " + name + " and collect the upgrade";
 		Set<WeaponType> wanted = computeWantedDrops(room);
-		return wanted.isEmpty() ? "Defeat " + name : "Defeat " + name + " and collect " + describeComponents(wanted);
+		if (wanted.isEmpty())
+			return "Defeat " + name;
+		if (wanted.size() < drops.size())
+			return "Defeat " + name + " for a chance at the " + describeComponents(wanted);
+		return "Defeat " + name + " and collect " + describeComponents(wanted);
 	}
 
 	/** The chosen demi's possible drops (computeDrops) that are still wanted; empty for a fallback kill. */

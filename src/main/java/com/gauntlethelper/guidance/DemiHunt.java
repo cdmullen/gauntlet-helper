@@ -174,7 +174,7 @@ final class DemiHunt
 			state.holdFight(findFightHere(context, current));
 			return fightDemiHere(context, needed, room, current);
 		}
-		Point fightRoom = findHeldFightRoom(context, needed);
+		Point fightRoom = findHeldFightRoom(context, needed, current);
 		if (fightRoom != null)
 			return fightDemiHere(context, needed, context.map.getRoom(fightRoom), fightRoom);
 		state.holdFight(null);
@@ -186,6 +186,10 @@ final class DemiHunt
 		Decision gather = gatherThisRoom(context, here);
 		if (gather != null)
 			return gather;
+		// A frame held with no staff yet: past this room's resources the post-loop staff return to home's bowl leads, not
+		// kills or the sweep, since a basic staff starts the hunt.
+		if (context.isStaffReturn() && !context.isAtHome() && !plan.hasStaff() && plan.isStaffInHand())
+			return Decision.CLAIM_ONLY;
 		// Until the outer room is checked, the post-loop search leads; this step only adds a staff-frame kill.
 		if (!context.isOuterRoomChecked())
 		{
@@ -238,13 +242,17 @@ final class DemiHunt
 	/**
 	 * The room of the demi whose fight began with the player in its room and still goes on, with the player now through
 	 * the open doorway; null when there is none. Either side's target counts, because the player's drops between attacks.
+	 * Only a neighboring room's fight holds: a demi still loaded and targeting the player after a teleport or a walk
+	 * rooms away is no fight to keep.
 	 */
-	private Point findHeldFightRoom(TickContext context, DemiBossPlan needed)
+	private Point findHeldFightRoom(TickContext context, DemiBossPlan needed, Point current)
 	{
 		NPC npc = state.getHeldFight();
 		if (npc == null || !context.getNeededDemis().contains(npc) || !context.isInFightWith(npc) || npc.getWorldLocation() == null)
 			return null;
 		Point room = context.opening.getRoomAt(npc.getWorldLocation());
+		if (room == null || current == null || Math.abs(room.getX() - current.getX()) + Math.abs(room.getY() - current.getY()) != 1)
+			return null;
 		return needed.isUseful(context.map, context.map.getRoom(room)) ? room : null;
 	}
 
@@ -301,7 +309,7 @@ final class DemiHunt
 
 	/**
 	 * Where travel goes once this demi is down and its drop is held, for the Next line and door during the fight.
-	 * Forecast with the drop added and the kill counted, in the order applyPriorities then takes: stored fish home, the
+	 * Forecast with the drop added and the kill counted, in the order applyPriorities then takes: fish left at home, the
 	 * demi sweep while upgrades are missing, else the optimized tour. A repeat kill whose possible drops lead to
 	 * different moves leaves the preview empty rather than guessing.
 	 */
@@ -430,7 +438,7 @@ final class DemiHunt
 		Point home = GauntletMap.HOME;
 		GroundLoot loot = context.loot;
 		if (plan.isReadyForStoredFood() && loot.countHomeFood() > 0 && !context.isAtHome())
-			return new AfterKill(home, "Return home to retrieve stored fish");
+			return new AfterKill(home, "Return home to pick up the fish you left");
 		if (!plan.getRow(Requirement.UPGRADES).isComplete())
 		{
 			// A tied sweep direction takes the nearer door from where the pickup leaves the player.

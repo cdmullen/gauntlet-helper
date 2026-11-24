@@ -566,17 +566,17 @@ public final class Simulation
 	{
 		int rawStored = Math.min(raw, count(GAUNTLET_RAW_FOOD));
 		int cookedStored = Math.min(cooked, count(GAUNTLET_FOOD));
-		// Stored fish are cooked first and left cooked at the range (one slot per fish either way).
+		// Fish to leave at home are cooked first and left cooked at the range (one slot per fish either way).
 		if (rawStored > 0)
 		{
 			remove(GAUNTLET_RAW_FOOD, rawStored);
 			put(GAUNTLET_FOOD, rawStored);
-			operations.add(new Operation(Kind.COOK, GAUNTLET_FOOD, rawStored, "Cook paddlefish before storing"));
+			operations.add(new Operation(Kind.COOK, GAUNTLET_FOOD, rawStored, "Cook paddlefish before dropping"));
 			cookedStored += rawStored;
 		}
 		if (cookedStored > 0)
 		{
-			drop(GAUNTLET_FOOD, cookedStored, Kind.STORE_FISH, "Store cooked fish at the range until final retrieval");
+			drop(GAUNTLET_FOOD, cookedStored, Kind.STORE_FISH, "Drop cooked fish at the range until the final pickup");
 			storedCooked += cookedStored;
 			markDirty();
 		}
@@ -595,7 +595,7 @@ public final class Simulation
 		storedRaw -= raw;
 		markDirty();
 		if (raw + cooked > 0)
-			operations.add(new Operation(Kind.RETRIEVE_FISH, GAUNTLET_RAW_FOOD, raw + cooked, "Retrieve stored fish"));
+			operations.add(new Operation(Kind.RETRIEVE_FISH, GAUNTLET_RAW_FOOD, raw + cooked, "Pick up the fish you left"));
 	}
 
 	/** Forecast a collect-before-home trip, including conversion and subsequent recipe workspace. */
@@ -629,7 +629,7 @@ public final class Simulation
 		sim.normalize(true, true, true);
 		int peak = Math.max(gearPeak, sim.peak);
 		int shortfall = Math.max(0, peak - Inventory.SIZE);
-		// No fish is kept in the inventory when storing.
+		// No fish is kept in the inventory when dropping fish at home.
 		int raw = Math.min(inv.getHeld(GAUNTLET_RAW_FOOD), shortfall);
 		int cooked = Math.min(inv.getHeld(GAUNTLET_FOOD), Math.max(0, shortfall - raw));
 		return new Capacity(Math.max(0, peak - baseline), peak, raw, cooked);

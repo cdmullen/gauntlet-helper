@@ -55,6 +55,8 @@ import net.runelite.api.coords.WorldPoint;
 public final class GauntletMap
 {
 	public static final int SIZE = 7;
+	/** Hunllef's room is the center of the grid: this row and this column. */
+	public static final int BOSS_ROW_COLUMN = 3;
 	/** The home room (spawn), at the center of the map; rooms are relative to it. */
 	public static final Point HOME = new Point(0, 0);
 	/**
@@ -62,6 +64,12 @@ public final class GauntletMap
 	 * roots (and one with weak monsters); the Corrupted Gauntlet's ring has no such rooms.
 	 */
 	public static final int RING_GUARANTEE_NODES = 3;
+
+	/** findRingPath's costs: rooms, then doors to light, then edge rooms, then walking tiles to the first doorway. */
+	private static final int RING_ROOM_COST = 1_000_000, RING_LIGHT_COST = 20_000, RING_EDGE_COST = 1_000;
+
+	/** Cost of one room step; an unopened step adds one, so it only breaks ties between equally short routes. */
+	private static final int ROOM_STEP_COST = 100;
 
 	public static final class SearchTarget
 	{
@@ -122,7 +130,7 @@ public final class GauntletMap
 			for (int col = 0; col < SIZE; col++)
 				rooms[row][col] = new GauntletRoom(row, col, startIndex);
 		discover(HOME);
-		GauntletRoom boss = rooms[3][3];
+		GauntletRoom boss = rooms[BOSS_ROW_COLUMN][BOSS_ROW_COLUMN];
 		for (GauntletRoom.Direction d : boss.getConnections().keySet())
 			connect(getRelative(boss), d, GauntletRoom.Connection.HUNLLEF_BARRIER);
 		return true;
@@ -145,6 +153,9 @@ public final class GauntletMap
 	{
 		return rooms == null || row < 0 || row >= SIZE || column < 0 || column >= SIZE ? null : rooms[row][column];
 	}
+
+	/** Hunllef's room, or null before the map is set up. */
+	public GauntletRoom getBossRoom() { return getRoom(BOSS_ROW_COLUMN, BOSS_ROW_COLUMN); }
 
 	public GauntletRoom getRoom(Point relative)
 	{
@@ -444,12 +455,6 @@ public final class GauntletMap
 				: to.getY() > from.getY() ? GauntletRoom.Direction.NORTH
 				: GauntletRoom.Direction.SOUTH;
 	}
-
-	/** findRingPath's costs: rooms, then doors to light, then edge rooms, then walking tiles to the first doorway. */
-	private static final int RING_ROOM_COST = 1_000_000, RING_LIGHT_COST = 20_000, RING_EDGE_COST = 1_000;
-
-	/** Cost of one room step; an unopened step adds one, so it only breaks ties between equally short routes. */
-	private static final int ROOM_STEP_COST = 100;
 
 	public List<Point> findExplorationPath(Point from, Point to, Predicate<Point> firstStep)
 	{

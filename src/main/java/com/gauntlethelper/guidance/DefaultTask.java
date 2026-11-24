@@ -275,7 +275,7 @@ final class DefaultTask
 			if (home.getInstruction() != null && (!plan.needsOpeningStaff() || plan.isStaffInHand() || guidance.isHomeTile(player.getWorldLocation())))
 			{
 				boolean storageFirst = home.getNextCraft() != null && HomeReturns.isStorageFirst(plan, guidance.getHomeVisit(plan));
-				guidance.attempt.setInstruction(storageFirst ? "Cook and store fish, then craft at home" : home.getInstruction());
+				guidance.attempt.setInstruction(storageFirst ? "Cook and drop fish, then craft at home" : home.getInstruction());
 				guidance.attempt.startStaffReturn();
 				if (home.getNextCraft() == null)
 					return true; // Space must be made before selecting the recipe.
@@ -301,6 +301,7 @@ final class DefaultTask
 			guidance.attempt.markOuterRoomChecked();
 			guidance.perimeter.prefer(guidance.gauntletMap.getRelative(known.objective), plan);
 			targeting.inspectionGoal = guidance.gauntletMap.getRelative(known.objective);
+			targeting.goalIsWalk = false;
 			if (guidance.tour.gatherCurrentRoom(plan, route, view, position))
 			{
 				guidance.attempt.setInstruction("Demi hunting: " + targeting.targetKind.label);
@@ -309,6 +310,7 @@ final class DefaultTask
 			return guidance.routing.navigateRoom(known.waypoint, "Demi hunting: " + known.getLabel());
 		}
 		targeting.inspectionGoal = outer;
+		targeting.goalIsWalk = false;
 		WorldPoint here = player.getWorldLocation();
 		if (guidance.tour.gatherCurrentRoom(plan, route, view, here))
 		{
@@ -434,7 +436,7 @@ final class DefaultTask
 
 	/**
 	 * The first home station after the loop: the bowl for a ready craft, else the range when cooking is due. The range
-	 * also comes first when storing fish makes room for crafts waiting for slots.
+	 * also comes first when dropping fish makes room for crafts waiting for slots.
 	 */
 	ObjectKind getHomeArrivalStation(HomeCraftPlan home, Requirements plan)
 	{

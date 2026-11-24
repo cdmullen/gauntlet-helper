@@ -44,7 +44,7 @@ import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.WidgetItemOverlay;
 
-/** Filled drop/store squares, per-action outlines and an explicit Fill cue on empty vials. */
+/** Filled drop squares, per-action outlines and an explicit Fill cue on empty vials. */
 public class InventoryOverlay extends WidgetItemOverlay
 {
 	private final GauntletHelperPlugin plugin;
@@ -106,7 +106,7 @@ public class InventoryOverlay extends WidgetItemOverlay
 		return (InventoryCue.getGrindShards(cue) + Recipes.GRIND_BATCH - 1) / Recipes.GRIND_BATCH;
 	}
 
-	/** One color per action; every drop is red, fish stored at home too. Null cue: crystal,
+	/** One color per action; every drop is red, fish dropped at home too. Null cue: crystal,
 	 *  in the current action color. */
 	Color getColor(String cue)
 	{

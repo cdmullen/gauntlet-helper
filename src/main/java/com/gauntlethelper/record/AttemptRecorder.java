@@ -134,6 +134,8 @@ public final class AttemptRecorder
 	private final List<String> pendingEvents = new ArrayList<>();
 	private String result;
 	private boolean recording;
+	// This attempt's recording failed: no new one starts until endAttempt.
+	private boolean attemptFailed;
 	private int keepRecordings;
 	private int lastTick;
 	private String name;
@@ -168,6 +170,34 @@ public final class AttemptRecorder
 	public boolean isRecording()
 	{
 		return recording;
+	}
+
+	/**
+	 * Whether this attempt's recording failed (a capture or write failure). No new recording should start until
+	 * {@link #endAttempt}: a failure that repeats would otherwise start a file every tick, and each start's cleanup
+	 * would delete the saved recordings.
+	 */
+	public boolean isAttemptFailed()
+	{
+		return attemptFailed || (recording && failed);
+	}
+
+	/** Gives up on this attempt's recording: ends it and starts none until {@link #endAttempt}. */
+	public void failAttempt(int tick, String reason)
+	{
+		if (!attemptFailed)
+		{
+			log.info("Gauntlet attempt recorder: no new recording until this attempt ends ({})", reason);
+		}
+		attemptFailed = true;
+		stop(tick, reason);
+	}
+
+	/** The attempt is over (left the Gauntlet, reset, setting off): ends the recording and lets the next one start. */
+	public void endAttempt(int tick, String reason)
+	{
+		attemptFailed = false;
+		stop(tick, reason);
 	}
 
 	/** Setting Keep recordings: how many recordings the next start leaves on disk, itself included; 0 keeps all. */
@@ -265,6 +295,7 @@ public final class AttemptRecorder
 		if (failed)
 		{
 			recording = false;
+			attemptFailed = true;
 			return;
 		}
 		lastTick = frame.tick;

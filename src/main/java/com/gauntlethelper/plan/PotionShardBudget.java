@@ -28,6 +28,8 @@
 
 package com.gauntlethelper.plan;
 
+import com.gauntlethelper.game.Tier;
+import java.util.List;
 import static net.runelite.api.gameval.ItemID.GAUNTLET_CRYSTAL_SHARD_CRUSHED_HM;
 import static net.runelite.api.gameval.ItemID.GAUNTLET_CRYSTAL_SHARD_HM;
 import static net.runelite.api.gameval.ItemID.GAUNTLET_MAGIC_T2_HM;
@@ -35,7 +37,7 @@ import static net.runelite.api.gameval.ItemID.GAUNTLET_MAGIC_T3_HM;
 
 /**
  * Potion spending never consumes shards reserved for the attuned staff and full T1 armor, which is made after the
- * staff from the shards left.
+ * staff from the shards left, nor the attuned tier of a selected weapon whose upgrade component is held.
  */
 public final class PotionShardBudget
 {
@@ -49,14 +51,31 @@ public final class PotionShardBudget
 		return reserve + ArmorUpgrades.owned(inventory).computeShards(baseGoal);
 	}
 
-	public static boolean canBuyVial(Inventory inventory, boolean needStaff, int baseGoal)
+	/**
+	 * The attuned-tier shards of each selected weapon whose upgrade component is held but that owns neither the attuned
+	 * nor the perfected tier: the bowl finishes that weapon before vials. The opening staff's are in the gear reserve.
+	 */
+	public static int computeWeaponReserve(Inventory inventory, boolean needStaff, List<WeaponType> weaponTypes)
 	{
-		return inventory.getHeld(GAUNTLET_CRYSTAL_SHARD_HM) >= computeGearReserve(inventory, needStaff, baseGoal) + Recipes.SHARDS_PER_VIAL;
+		int reserve = 0;
+		for (WeaponType type : weaponTypes)
+			if (inventory.getHeld(type.getComponent()) > 0
+					&& inventory.getOwned(type.getItem(Tier.ATTUNED)) + inventory.getOwned(type.getPerfected()) == 0
+					&& !(type == WeaponType.STAFF && needStaff))
+				reserve += HomeCraftPlan.ATTUNE_SHARDS;
+		return reserve;
+	}
+
+	/** One vial's shards are left over after the gear and weapon reserves; Requirements and HomeCraftPlan both ask this. */
+	public static boolean canBuyVial(Inventory inventory, boolean needStaff, int baseGoal, List<WeaponType> weaponTypes)
+	{
+		return inventory.getHeld(GAUNTLET_CRYSTAL_SHARD_HM) >= computeGearReserve(inventory, needStaff, baseGoal)
+				+ computeWeaponReserve(inventory, needStaff, weaponTypes) + Recipes.SHARDS_PER_VIAL;
 	}
 
 	public static boolean canBuyVial(Requirements plan, Inventory inventory)
 	{
-		return canBuyVial(inventory, needsStaff(plan), ArmorUpgrades.getBaseGoal(plan.getArmorGoal()));
+		return canBuyVial(inventory, needsStaff(plan), ArmorUpgrades.getBaseGoal(plan.getArmorGoal()), plan.getDesiredWeaponTypes());
 	}
 
 	public static int getShardsForDust(int missing)

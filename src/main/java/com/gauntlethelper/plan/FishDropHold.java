@@ -30,7 +30,7 @@ package com.gauntlethelper.plan;
 
 /**
  * Holds a started home fish drop until the requested count is on the floor. Each dropped fish frees a
- * slot, which could make a recipe fit and swap the storage task for a craft task mid-drop.
+ * slot, which could make a recipe fit and swap the fish-drop task for a craft task mid-drop.
  */
 public final class FishDropHold
 {

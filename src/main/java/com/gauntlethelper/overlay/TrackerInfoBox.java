@@ -58,7 +58,7 @@ public class TrackerInfoBox extends InfoBox
 		Requirements plan = plugin.getPlan();
 		if (plan != null)
 		{
-			setTooltip(Instructions.getLabel(plan, resource) + ": " + plan.getRow(resource).getText() + " (held / current requirement)");
+			setTooltip(Instructions.getLabel(plan, resource) + ": " + plan.getRow(resource).getText());
 		}
 	}
 
@@ -71,7 +71,7 @@ public class TrackerInfoBox extends InfoBox
 	}
 
 	@Override
-	public String getName() { return "Gauntlet Helper: " + resource.getLabel(); }
+	public String getName() { return "Gauntlet Helper: " + resource.getTrackerName(); }
 	@Override
 	public String getText()
 	{

@@ -202,10 +202,21 @@ public final class PerimeterSearch
 				{
 					int plus = computeNextCost(map, ring, ringIndex, 1, firstStep, goal, plan);
 					int minus = computeNextCost(map, ring, ringIndex, -1, firstStep, goal, plan);
-					if (minus == plus && doorSteps != null)
+					if (minus == plus)
 					{
-						minus = countFirstDoorSteps(map, ring, ringIndex, -1, firstStep, goal, doorSteps);
-						plus = countFirstDoorSteps(map, ring, ringIndex, 1, firstStep, goal, doorSteps);
+						// Even one cost unit is a ring step nearer, so only an exact tie lets a resource on the way decide.
+						boolean plusGathers = passesNeededResource(map, ring, ringIndex, 1, firstStep, goal, plan);
+						boolean minusGathers = passesNeededResource(map, ring, ringIndex, -1, firstStep, goal, plan);
+						if (plusGathers != minusGathers)
+						{
+							plus = plusGathers ? 0 : 1;
+							minus = minusGathers ? 0 : 1;
+						}
+						else if (doorSteps != null)
+						{
+							minus = countFirstDoorSteps(map, ring, ringIndex, -1, firstStep, goal, doorSteps);
+							plus = countFirstDoorSteps(map, ring, ringIndex, 1, firstStep, goal, doorSteps);
+						}
 					}
 					direction = minus < plus ? -1 : 1;
 				}
@@ -296,6 +307,30 @@ public final class PerimeterSearch
 		Point nextRoom = findNext(map, ring, ringIndex, dir, firstStep, goal);
 		List<Point> leg = nextRoom == null ? Collections.emptyList() : map.findExplorationPath(ring.get(ringIndex), nextRoom, firstStep);
 		return leg.size() < 2 ? Integer.MAX_VALUE : doorSteps.applyAsInt(leg.get(1));
+	}
+
+	/**
+	 * Whether the leg to this direction's next sweep room passes (or ends in) a room with a known node of a gathered
+	 * resource still short, the player's own room aside. computeCost credits a resource only as a detour from the
+	 * destination, so one beside home counts as free both ways; a node on the sweep's own way is gathered with no
+	 * detour at all.
+	 */
+	private boolean passesNeededResource(GauntletMap map, List<Point> ring, int ringIndex, int dir, Predicate<Point> firstStep,
+			DemiBossPlan goal, Requirements plan)
+	{
+		Point nextRoom = findNext(map, ring, ringIndex, dir, firstStep, goal);
+		if (nextRoom == null)
+			return false;
+		List<Point> leg = map.findExplorationPath(ring.get(ringIndex), nextRoom, firstStep);
+		for (Point step : leg.subList(Math.min(1, leg.size()), leg.size()))
+		{
+			GauntletRoom room = map.getRoom(step);
+			if (room != null)
+				for (Requirement resource : Requirement.GATHERED)
+					if (plan.getRow(resource).getMissing() > 0 && room.countResourceNodes(resource) > 0)
+						return true;
+		}
+		return false;
 	}
 
 	private int computeNextCost(GauntletMap map, List<Point> ring, int ringIndex, int dir, Predicate<Point> firstStep, DemiBossPlan goal, Requirements plan)

@@ -41,11 +41,11 @@ public enum Requirement
 	LINUM_TIRINUM("Linum tirinum", ItemID.GAUNTLET_FIBRE_HM, "Pick linum tirinum", -1),
 	SHARDS("Shards", ItemID.GAUNTLET_CRYSTAL_SHARD_HM),
 	FRAMES("Frames", ItemID.GAUNTLET_GENERIC_COMPONENT_HM),
-	UPGRADES("Distinct upgrades", ItemID.GAUNTLET_MAGIC_COMPONENT_HM),
+	UPGRADES("Weapon upgrades", ItemID.GAUNTLET_MAGIC_COMPONENT_HM, null, -1, "Distinct upgrades"),
 	GRYM_LEAVES("Grym leaves", ItemID.GAUNTLET_HERB_HM, "Pick grym leaves", -1),
 	VIALS("Vials / unfinished", ItemID.GAUNTLET_VIAL_EMPTY_HM),
 	DUST("Dust", ItemID.GAUNTLET_CRYSTAL_SHARD_CRUSHED_HM, null, ItemID.GAUNTLET_PESTLE),
-	FISH("Fish (raw + cooked)", ItemID.GAUNTLET_RAW_FOOD, "Catch paddlefish", ItemID.GAUNTLET_HARPOON_HM),
+	FISH("Fish", ItemID.GAUNTLET_RAW_FOOD, "Catch paddlefish", ItemID.GAUNTLET_HARPOON_HM, "Fish (raw + cooked)"),
 	COOKED("Cooked fish", ItemID.GAUNTLET_FOOD),
 	POTIONS("Potions crafted", ItemID.GAUNTLET_POTION_3),
 	ARMOR("Armor pieces", ItemID.GAUNTLET_CHESTPLATE_T1_HM),
@@ -61,6 +61,7 @@ public enum Requirement
 	public static final Requirement[] TOOLED = {ORE, BARK, FISH, DUST};
 
 	private final String label;
+	private final String trackerName;
 	private final int itemId;
 	private final String gatherLabel;
 	private final int tool;
@@ -69,6 +70,12 @@ public enum Requirement
 
 	Requirement(String label, int itemId, String gatherLabel, int tool)
 	{
+		this(label, itemId, gatherLabel, tool, label);
+	}
+
+	Requirement(String label, int itemId, String gatherLabel, int tool, String trackerName)
+	{
+		this.trackerName = trackerName;
 		this.label = label;
 		this.itemId = itemId;
 		this.gatherLabel = gatherLabel;
@@ -76,6 +83,9 @@ public enum Requirement
 	}
 
 	public String getLabel() { return label; }
+
+	/** The name a tracker infobox is saved under; fixed, so a reworded label never moves a detached infobox. */
+	public String getTrackerName() { return trackerName; }
 	public int getItemId() { return itemId; }
 
 	/** The instruction that gathers this resource from a node ("Mine ore"), null for a row nothing gathers. */

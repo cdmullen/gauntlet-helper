@@ -90,6 +90,51 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ~~~
 
+### Gauntlet Map, by Tyler (StickySerum)
+
+[Gauntlet Map](https://github.com/StickySerum/gauntlet-map) (Plugin Hub: `gauntlet-map`, reference commit `25d36de`)
+draws a map of the Gauntlet's rooms from its own tile images.
+
+- **Room map tiles.** The room map's default style, Gauntlet Map, draws all 109 of its PNG tiles, copied unchanged
+  from `src/main/resources/com/gauntletmap` into `src/main/resources/com/gauntlethelper/overlay/gauntletmap`: the lit
+  and unlit room tiles (`active*`, `inactive*`), the corrupted and regular sets of demi room, Hunllef, player and start
+  room tiles (`corrupted/`, `regular/`), the demi-boss tiles (`demiboss/`) and the fish and grym leaf tiles
+  (`resources/`). GauntletMapStyle.java places them as Gauntlet Map's overlay does (a 7x7 grid in a standard overlay
+  panel, 23 px tiles by default, scaled the same way): a lit room with a living demi-boss, fish or grym leaves shows
+  that tile instead of the plain lit one. Its tracking code is not used: what the tiles show comes from this plugin's
+  own observed room model. At run time the plugin tints the red demi room tile orange for the other edge rooms and,
+  with the Current room resources setting, redraws the player's room from the player and resource tiles' own pixels
+  (the player mark and the icons smaller, side by side); the files themselves are unchanged.
+
+The license ships beside the tiles as `gauntletmap/LICENSE.txt`.
+
+~~~text
+BSD 2-Clause License
+
+Copyright (c) 2023, Tyler
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+~~~
+
 ### RuneLite example plugin (build tooling)
 
 `gradlew`, `gradlew.bat` and `gradle/wrapper/*` come from the
@@ -112,8 +157,7 @@ These projects shaped how the plugin looks and behaves. No code or media from th
   guide, showing what to do now, what comes next and where to go while every click stays yours. Its NPC step
   highlighting was the precedent for marking the prep mobs to defeat.
 - **[Gauntlet Crafting](https://github.com/trs/runelite-gauntlet-crafting)** (trs, on the RuneLite Plugin Hub): the
-  idea for the singing bowl menu states, teal to craft now, yellow for wanted but not makeable yet and gray for not
-  needed.
+  idea for the singing bowl menu states, teal to craft now and gray for not needed.
 - **RuneLite's Ground Items and Ground Markers plugins**: helper item names sit on the same lines Ground Items
   draws, and the Hunllef room tile markers follow Ground Markers' look and instance tile mapping, so both line up
   with those plugins when you run them together. The plugin reads Ground Items' settings and never changes them.

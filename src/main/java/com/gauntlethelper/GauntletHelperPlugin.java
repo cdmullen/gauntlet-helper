@@ -44,6 +44,7 @@ import com.gauntlethelper.overlay.GroundLootOverlay;
 import com.gauntlethelper.overlay.InventoryOverlay;
 import com.gauntlethelper.overlay.MinimapOverlay;
 import com.gauntlethelper.overlay.ResourceOverlay;
+import com.gauntlethelper.overlay.RoomMapOverlay;
 import com.gauntlethelper.overlay.TasksOverlay;
 import com.gauntlethelper.overlay.TrackerInfoBox;
 import com.gauntlethelper.overlay.WorldOverlay;
@@ -112,7 +113,7 @@ import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 @PluginDescriptor(name = "Gauntlet Helper",
 		description = "Corrupted and regular Gauntlet prep guide: resource targets, routes and crafting cues",
 		tags = {"gauntlet", "corrupted", "prep", "cg", "hunllef"},
-		conflicts = {"The Gauntlet", "Gauntlet Minimap", "Gauntlet Crafting", "Hunllef Projectiles"},
+		conflicts = {"The Gauntlet", "Gauntlet Minimap", "Gauntlet Crafting", "Hunllef Projectiles", "Gauntlet Map"},
 		internalName = GauntletHelperPlugin.DATA_FOLDER)
 public class GauntletHelperPlugin extends Plugin
 {
@@ -140,6 +141,8 @@ public class GauntletHelperPlugin extends Plugin
 	private InventoryOverlay inventoryOverlay;
 	@Inject
 	private MinimapOverlay minimapOverlay;
+	@Inject
+	private RoomMapOverlay roomMapOverlay;
 	@Inject
 	GauntletHelperConfig config;
 	@Inject
@@ -210,7 +213,7 @@ public class GauntletHelperPlugin extends Plugin
 	public String getRouteWarning() { return guidance == null ? null : guidance.getRouteWarning(); }
 
 	/**
-	 * The panel's warning line: stored fish about to expire (whatever the settings), else time low while Time-aware
+	 * The panel's warning line: fish left at home about to expire (whatever the settings), else time low while Time-aware
 	 * return guidance is on, the prep clock is readable and the plan isn't ready for Hunllef yet. Null when neither
 	 * applies.
 	 */
@@ -219,8 +222,8 @@ public class GauntletHelperPlugin extends Plugin
 		if (config == null)
 			return null;
 		if (loot.hasExpiringHomeFood(client.getTickCount()))
-			return plan != null && plan.isReadyForStoredFood() ? "Stored fish expiring soon: retrieve remaining food"
-					: "Stored fish expiring; finish gear and potions before retrieval";
+			return plan != null && plan.isReadyForStoredFood() ? "Fish left at home expiring soon: pick up remaining food"
+					: "Fish left at home expiring; finish gear and potions before picking them up";
 		if (!config.useTimeAwareReturnGuidance())
 			return null;
 		return clock.isUrgent(Math.max(0, config.returnWarningSeconds())) ? formatLowTimeHint(plan) : null;
@@ -287,11 +290,11 @@ public class GauntletHelperPlugin extends Plugin
 		boolean canCraft = getHomeVisit().canCraft();
 		boolean holdsFish = getPlan().hasFish();
 		if (canCraft && holdsFish)
-			return guidance.isFullReturnStorageFirst() ? "Cook and store fish, then craft at home" : "Craft, cook and store fish at home";
+			return guidance.isFullReturnStorageFirst() ? "Cook and drop fish, then craft at home" : "Craft, cook and drop fish at home";
 		if (canCraft)
 			return "Craft at singing bowl";
 		if (holdsFish)
-			return "Cook and store fish at home";
+			return "Cook and drop fish at home";
 		return "Make inventory space at home";
 	}
 
@@ -325,7 +328,7 @@ public class GauntletHelperPlugin extends Plugin
 	}
 
 	/**
-	 * Home drop cues show when nothing is craftable, while a started fish drop is unfinished, or while fish storage
+	 * Home drop cues show when nothing is craftable, while a started fish drop is unfinished, or while dropping fish
 	 * goes first to make room for waiting crafts.
 	 */
 	boolean shouldShowHomeDrops()
@@ -362,6 +365,7 @@ public class GauntletHelperPlugin extends Plugin
 		overlayManager.add(craftOverlay);
 		overlayManager.add(inventoryOverlay);
 		overlayManager.add(minimapOverlay);
+		overlayManager.add(roomMapOverlay);
 		overlayManager.add(demiOutlineOverlay);
 		overlayManager.add(timerOverlay);
 		running = true;
@@ -388,6 +392,7 @@ public class GauntletHelperPlugin extends Plugin
 		overlayManager.remove(craftOverlay);
 		overlayManager.remove(inventoryOverlay);
 		overlayManager.remove(minimapOverlay);
+		overlayManager.remove(roomMapOverlay);
 		overlayManager.remove(demiOutlineOverlay);
 		overlayManager.remove(timerOverlay);
 		// shutDown runs on the EDT; attempt state and infobox list are owned by the client thread.

@@ -106,20 +106,21 @@ public final class AttemptCapture
 		int tick = client.getTickCount();
 		if (!config.logAttempts())
 		{
-			recorder.stop(tick, "setting turned off");
+			recorder.endAttempt(tick, "setting turned off");
 			return;
 		}
 		if (!plugin.isInPrep() && !plugin.isInBossFight())
 		{
-			recorder.stop(tick, "left CG");
+			recorder.endAttempt(tick, "left CG");
 			return;
 		}
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
 		if (!recorder.isRecording())
 		{
-			// A recording starts during preparation only, never part-way through the boss.
-			if (!plugin.isInPrep())
+			// A recording starts during preparation only, never part-way through the boss, and not again in an
+			// attempt whose recording failed.
+			if (!plugin.isInPrep() || recorder.isAttemptFailed())
 				return;
 			int seconds = plugin.getSecondsRemaining();
 			GauntletMode mode = plugin.getMode();
@@ -139,7 +140,7 @@ public final class AttemptCapture
 		{
 			// Diagnostics must never affect guidance: give up on this recording instead.
 			recorder.recordEvent("capture failed: " + e);
-			recorder.stop(tick, "capture failed");
+			recorder.failAttempt(tick, "capture failed");
 		}
 	}
 

@@ -63,7 +63,7 @@ final class MenuHandler
 	{
 		if (plugin.inPrep && plugin.recorder != null && "Drop".equalsIgnoreCase(event.getMenuOption()))
 			plugin.recorder.recordEvent("menu Drop item#" + event.getItemId());
-		if (!plugin.inPrep ||!"Drop".equalsIgnoreCase(event.getMenuOption()) || !GroundLoot.isFood(event.getItemId()))
+		if (!plugin.inPrep || !"Drop".equalsIgnoreCase(event.getMenuOption()) || !GroundLoot.isFood(event.getItemId()))
 			return;
 		Player player = plugin.client.getLocalPlayer();
 		if (player != null && plugin.guidance.isHomeTile(player.getWorldLocation()))

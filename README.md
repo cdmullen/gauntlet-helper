@@ -31,8 +31,8 @@ bow or halberd, 20 cooked paddlefish and two potions (one per Grym leaf, none wi
 - **Picks kill objectives.** Rats, bats and spiders become *Defeat* objectives when you still need shards or weapon
   frames. Larger mobs only become objectives late, when much of the shard total is still missing. All six ordinary
   enemy types keep a gray tile marker.
-- **Guides home visits.** At the starting room it marks the singing bowl's recipes: teal to craft now, yellow for
-  wanted but not makeable yet, dimmed gray for not needed. Crafts follow a fixed order: basic staff, attuned staff, T1 armor, upgraded weapons, then vials (and the armor upgrades last, with the T2 or T3 goal). Filling vials, cooking at the range and leaving surplus fish
+- **Guides home visits.** At the starting room it marks the singing bowl's recipes: teal to craft now, plain for
+  wanted but not crafted now, dimmed gray for not needed. Crafts follow a fixed order: basic staff, attuned staff, T1 armor, upgraded weapons, then vials (and the armor upgrades last, with the T2 or T3 goal). Filling vials, cooking at the range and leaving surplus fish
   on the floor follow. Inventory items to drop get red squares; items to equip, fill, mix or grind get colored
   outlines.
 - **Hunts the demi-bosses.** After the first home visit it heads outward and searches the perimeter rooms for the
@@ -58,7 +58,7 @@ bow or halberd, 20 cooked paddlefish and two potions (one per Grym leaf, none wi
 
 ## Conflicts with other plugins
 
-Gauntlet Helper is meant to be the one plugin you need for a Gauntlet run, so it has its own versions of the highlights these plugins draw, some adapted from them (see Credits). To avoid drawing them twice, it declares a conflict with The Gauntlet, Gauntlet Minimap, Gauntlet Crafting and Hunllef Projectiles from the Plugin Hub: enabling one switches the other off.
+Gauntlet Helper is meant to be the one plugin you need for a Gauntlet run, so it has its own versions of the highlights these plugins draw, some adapted from them (see Credits). To avoid drawing them twice, it declares a conflict with The Gauntlet, Gauntlet Minimap, Gauntlet Crafting, Hunllef Projectiles and Gauntlet Map from the Plugin Hub (Gauntlet Map draws a room map, and this plugin has its own, which is off until you turn it on in Overlay): enabling one switches the other off.
 
 ## Main settings
 
@@ -70,13 +70,10 @@ configurable. Every setting and its default is listed in [docs/product/SETTINGS.
 
 ## Limits
 
-- **Goals are settings.** The Armor goal, Paddlefish and Grym leaf settings decide the loadout; the plugin never changes them on its own.
-- **Everything is manual.** The plugin only observes the game and draws highlights.
-- **No combat prediction or advice.** There is no attack prediction, prayer-switch advice or safe-spot routing. The
-  Hunllef and tornado tiles show their current state only, and the room tile markers never react to the fight.
-- **Plans are estimates.** Unseen rooms, node yields and drops are unknown until observed, and route planning is
-  bounded, so the suggested route is a good one, not a proven fastest run. Paths use collision data and ignore NPCs.
-- **Enabling mid-run** rebuilds what you hold, but not earlier kills or ground items it never saw.
+- **No fight advice.** It doesn't predict Hunllef's attacks or tell you when to switch prayers or where to stand. The
+  Hunllef and tornado tiles only show what's happening right now.
+- **Routes are general advice, not perfect.** It can't know what's in a room until you light it, how much a resource
+  gives or what an enemy drops, so it plans from what it has seen.
 
 ## Privacy
 

@@ -53,6 +53,7 @@ import net.runelite.api.gameval.ItemID;
 final class Sceptre
 {
 	private static final String RETURN_FOR_SCEPTRE = "Return to spawn for a sceptre (needed to light rooms)";
+	private static final ObjectKind[] GATHERED = {ObjectKind.ORE, ObjectKind.BARK, ObjectKind.LINUM_TIRINUM, ObjectKind.GRYM_LEAVES, ObjectKind.FISH};
 	private final SceptreState state = new SceptreState();
 
 	/** What the inventory advice does with a held sceptre. */
@@ -78,6 +79,12 @@ final class Sceptre
 	}
 
 	boolean isSceptreRecovery() { return state.isRecovery(); }
+
+	/**
+	 * The drop cue is latched: shown since no room was left to light. A sceptre dropped on it is not one the way home
+	 * lights a door with (Routing.canLightDoor).
+	 */
+	boolean isDropCued() { return state.isCued(); }
 
 	/** A recovery Decision is published: the overlay draws the task in the recovery blue. */
 	void startRecovery()
@@ -200,15 +207,17 @@ final class Sceptre
 
 	/**
 	 * No room is left to light: the opening and demi hunt are done, shards and frames are held, no Light door is the
-	 * current or next task, and each gathered resource still short is surely covered by nodes in rooms reached through
-	 * lit doors, counting each node one under its nominal yield as in isRoomSurelyCovering. The held sceptre then gets
-	 * a drop cue, before final preparation. Once shown, the cue stays until the sceptre is needed again (isSceptreNeeded).
+	 * current or next task, no gathering trip out of home is still ahead (isGatheringTripAhead), and each gathered
+	 * resource still short is surely covered by nodes in rooms reached through lit doors, counting each node one under
+	 * its nominal yield, less what it already gave, as in isRoomSurelyCovering. The held sceptre then gets a drop cue,
+	 * before final preparation. Once shown, the cue stays until the sceptre is needed again (isSceptreNeeded).
 	 */
 	private boolean isSceptreDone(TickContext context)
 	{
 		Requirements plan = context.plan;
 		if (!context.opening.isInitialized() || context.opening.isActive() || !plan.getRow(Requirement.UPGRADES).isComplete()
-				|| !plan.getRow(Requirement.SHARDS).isComplete() || !plan.getRow(Requirement.FRAMES).isComplete() || isSceptreNeeded(context))
+				|| !plan.getRow(Requirement.SHARDS).isComplete() || !plan.getRow(Requirement.FRAMES).isComplete() || isSceptreNeeded(context)
+				|| isGatheringTripAhead(context))
 		{
 			state.clearCue();
 			return false;
@@ -220,14 +229,43 @@ final class Sceptre
 
 	/**
 	 * A Light door is the current or next task, or the shortest way home from this room lights one
-	 * (Routing.hasHomeShortcut). Dropping the sceptre here would send the player the long way round.
+	 * (Routing.hasHomeShortcut) and the trip doesn't go home by teleport (isTeleportHomePlanned). Dropping the sceptre
+	 * here would send the player the long way round.
 	 */
 	private static boolean isSceptreNeeded(TickContext context)
 	{
 		if (context.getTaskKind() == ObjectKind.DOOR || context.getNextKind() == ObjectKind.DOOR)
 			return true;
 		Player player = context.getPlayer();
-		return player != null && context.opening.isInitialized() && context.hasHomeShortcut(context.opening.getRoomAt(player.getWorldLocation()));
+		return player != null && context.opening.isInitialized() && !isTeleportHomePlanned(context)
+				&& context.hasHomeShortcut(context.opening.getRoomAt(player.getWorldLocation()));
+	}
+
+	/**
+	 * The way home from here is a teleport: the crystal is held, it saves walking (isTeleportWorthwhile), and the room
+	 * tour ends with it, a teleport or home return is latched, or time is low, the reasons the teleport is suggested for.
+	 */
+	static boolean isTeleportHomePlanned(TickContext context)
+	{
+		if (context.isAtHome() || context.inv.getHeld(ItemID.GAUNTLET_TELEPORT_CRYSTAL_HM) <= 0)
+			return false;
+		String after = context.getAfterRoomLabel();
+		boolean planned = after != null && after.startsWith("Use teleport") || context.isTripTeleport() || context.isReturningHome() || context.urgent;
+		return planned && context.isTeleportWorthwhile();
+	}
+
+	/**
+	 * At home, or on the way there, with a gathered resource still short: a trip out for it is still ahead, so the
+	 * sceptre stays for any room it lights. It is dropped once only home work is left, or on the trip itself.
+	 */
+	static boolean isGatheringTripAhead(TickContext context)
+	{
+		if (!context.isAtHome() && !context.isReturningHome())
+			return false;
+		for (ObjectKind kind : GATHERED)
+			if (context.plan.getRow(kind.resource).getMissing() > 0)
+				return true;
+		return false;
 	}
 
 	private static boolean hasNoRoomToLight(TickContext context)
@@ -250,10 +288,10 @@ final class Sceptre
 			{
 				int nominal = node.getKind().getNominalYield();
 				if (node.isActive() && node.getKind().resource != null)
-					sure.merge(node.getKind(), nominal <= 1 ? nominal : nominal - 1, Integer::sum);
+					sure.merge(node.getKind(), nominal <= 1 ? nominal : Math.max(0, nominal - context.getHarvested(node.getLocation()) - 1), Integer::sum);
 			}
 		}
-		for (ObjectKind kind : new ObjectKind[]{ObjectKind.ORE, ObjectKind.BARK, ObjectKind.LINUM_TIRINUM, ObjectKind.GRYM_LEAVES, ObjectKind.FISH})
+		for (ObjectKind kind : GATHERED)
 			if (plan.getRow(kind.resource).getMissing() > sure.getOrDefault(kind, 0))
 				return false;
 		return true;

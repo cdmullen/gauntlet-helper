@@ -29,7 +29,7 @@
 package com.gauntlethelper.plan;
 
 /**
- * Attempt-local fish quota latch. Until the fish row (held raw + cooked plus observed stored food) first reaches the
+ * Attempt-local fish quota latch. Until the fish row (held raw + cooked plus observed food left at home) first reaches the
  * food target, counts follow the fish owned as usual. From then on the requirement stays met for the attempt: a fish
  * eaten later lowers the food target to the fish still owned instead of asking for more fishing, because eating during
  * prep is the player's own choice.

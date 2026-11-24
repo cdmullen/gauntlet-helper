@@ -32,6 +32,7 @@ import com.gauntlethelper.GauntletHelperPlugin;
 import com.gauntlethelper.config.GauntletHelperConfig;
 import com.gauntlethelper.config.ResourceSettings;
 import com.gauntlethelper.game.EnemyType;
+import com.gauntlethelper.game.ObjectKind;
 import com.gauntlethelper.guidance.Guidance;
 import com.gauntlethelper.plan.Instructions;
 import com.gauntlethelper.plan.Requirement;
@@ -39,6 +40,7 @@ import com.gauntlethelper.plan.Requirements;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import net.runelite.api.NPC;
 import net.runelite.client.ui.overlay.OverlayPanel;
@@ -49,6 +51,9 @@ import net.runelite.client.ui.overlay.components.TitleComponent;
 /** The prep panel: the current and next task and the requirement rows. */
 public class TasksOverlay extends OverlayPanel
 {
+	/** The non-digits stripStatus turns into spaces, leaving a loop status's numbers. */
+	static final Pattern NON_DIGITS = Pattern.compile("\\D+");
+
 	private final GauntletHelperConfig config;
 	private final GauntletHelperPlugin plugin;
 	private final Guidance guidance;
@@ -60,6 +65,7 @@ public class TasksOverlay extends OverlayPanel
 		this.plugin = plugin;
 		this.guidance = guidance;
 		setPosition(OverlayPosition.TOP_LEFT);
+		setPriority(TopLeftStack.TASKS_PRIORITY);
 		// A size saved by resizing the panel still wins over this default.
 		panelComponent.setPreferredSize(new Dimension(220, 0));
 	}
@@ -104,7 +110,9 @@ public class TasksOverlay extends OverlayPanel
 		{
 			Instructions text = plugin.getPlanInstructions();
 			String next = plugin.getSecondaryInstruction();
-			if (next == null && plan.isReady())
+			if (next == null && guidance.isCookingBeforeHunllef(plan))
+				next = ObjectKind.BARRIER.label;
+			else if (next == null && plan.isReady())
 				next = plugin.getInstruction().equals(text.getInstruction()) ? text.getNext() : "Fight Hunllef";
 			else if (next == null)
 				next = buildFallbackNext(plugin.getInstruction(), plugin.getInstruction().equals(text.getInstruction())
@@ -113,7 +121,7 @@ public class TasksOverlay extends OverlayPanel
 				addLine("Next: " + next, config.nextActionColor());
 		}
 		// The time left itself is shown by the game's Time Left box or the Gauntlet timer, never here; the hint's own
-		// gates (expiring stored fish, or time low with Time-aware return guidance) are in getTimeHint.
+		// gates (expiring fish left at home, or time low with Time-aware return guidance) are in getTimeHint.
 		String hint = plugin.getTimeHint();
 		if (hint != null)
 			for (String part : hint.split("\n"))
@@ -167,7 +175,7 @@ public class TasksOverlay extends OverlayPanel
 		if (status.equals(Guidance.DEMI_HUNTING))
 			rest = stripPrefix(nowText, "Demi hunting: ", "Demi search: ");
 		else if (status.startsWith("First loop"))
-			rest = stripPrefix(nowText, "Opening loop: ", "Opening loop " + status.replaceAll("\\D+", " ").trim().replace(' ', '/') + ": ");
+			rest = stripPrefix(nowText, "Opening loop: ", "Opening loop " + NON_DIGITS.matcher(status).replaceAll(" ").trim().replace(' ', '/') + ": ");
 		else
 			rest = stripPrefix(nowText, status + ": ");
 		if (rest == null || rest.isEmpty())

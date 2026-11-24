@@ -50,7 +50,7 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.ItemID;
 
 /**
- * Home work outside the task steps: the home storage hold before a space-constrained departure (prepareHomeSpace, which
+ * Home work outside the task steps: the home fish-drop hold before a space-constrained departure (prepareHomeSpace, which
  * replaces the steps when it applies) and whether a teleport home beats the walk.
  */
 final class HomeSpace
@@ -60,9 +60,9 @@ final class HomeSpace
 
 	private final Guidance guidance;
 	private final GuidanceState targeting;
-	/** At home, fish storage goes before the bowl because crafts are waiting for slots (prepareHomeSpace). */
+	/** At home, dropping fish goes before the bowl because crafts are waiting for slots (prepareHomeSpace). */
 	private boolean storeBeforeCrafting;
-	/** This home visit went to the range to cook and store: the raw fish left are cooked there too before leaving. */
+	/** This home visit went to the range to cook and drop fish: the raw fish left are cooked there too before leaving. */
 	private boolean cookingThisVisit;
 	/** The crystal was used on a trip heading for the range: its slot, now free, doesn't change the station on landing. */
 	private boolean landingAtRange;
@@ -167,8 +167,8 @@ final class HomeSpace
 	}
 
 	/**
-	 * Finish available home conversion or storage before a space-constrained departure, in the fixed home order:
-	 * craft at the bowl, fill vials at the pump, then cook and store fish at the range. Crafts waiting for slots
+	 * Finish available home conversion or fish drop before a space-constrained departure, in the fixed home order:
+	 * craft at the bowl, fill vials at the pump, then cook and drop fish at the range. Crafts waiting for slots
 	 * move the range first.
 	 */
 	boolean prepareHomeSpace(Requirements plan, InventoryAdvice advice)
@@ -182,12 +182,12 @@ final class HomeSpace
 			return finishCookingHere(plan);
 		}
 		guidance.attempt.clearInventorySpaceReturn();
-		// The task update chose, before the storage hold clears it; the task steps keep it after storing (isStaffSearchNext).
+		// The task update chose, before the fish-drop hold clears it; the task steps keep it after the drop (isStaffSearchNext).
 		TileObject departure = targeting.target;
 		ObjectKind departureKind = targeting.targetKind;
 		HomeCraftPlan home = guidance.getHomeVisit(plan).planCrafts();
 		// Crafts waiting for slots: cook and leave the surplus fish first.
-		// Held until storage ends, so a slot freed mid-cook (mixing a grym leaf) doesn't send the bowl back in between.
+		// Held until the fish drop ends, so a slot freed mid-cook (mixing a grym leaf) doesn't send the bowl back in between.
 		storeBeforeCrafting |= (landingAtRange || HomeReturns.isWaitingPastDropCues(plan, home, advice)) && !advice.isDropInProgress();
 		landingAtRange = false;
 		boolean stationFirst = !advice.isDropInProgress() && !storeBeforeCrafting;
@@ -204,17 +204,25 @@ final class HomeSpace
 	}
 
 	/**
-	 * Storing is done with raw fish still held: the player is at the range, so they are cooked now rather than on the
-	 * final visit. The bowl, the pump and inventory actions still come first. False when this doesn't apply.
+	 * The fish drop is done with raw fish still held: the player is at the range, so they are cooked now rather than on the
+	 * final visit, every one of them, past the food target too. Cooking started here finishes first: the bowl and the pump wait for it and are Next. Inventory
+	 * actions still come first. False when this doesn't apply.
 	 */
 	private boolean finishCookingHere(Requirements plan)
 	{
 		Inventory inv = plan.getInventory();
-		if (!cookingThisVisit || plan.isReady() || plan.isInventoryAction() || guidance.canCraft(plan) || plan.needsWater()
-				|| inv.getHeld(ItemID.GAUNTLET_RAW_FOOD) == 0 || inv.getHeld(ItemID.GAUNTLET_FOOD) >= plan.getFoodTarget())
+		int raw = inv.getHeld(ItemID.GAUNTLET_RAW_FOOD);
+		if (!cookingThisVisit || plan.isReady() || plan.isInventoryAction() || raw == 0)
 			return false;
-		holdForHomeStorage(ObjectKind.RANGE.label);
-		if (targeting.lastRoute != null && guidance.routing.targetService(ObjectKind.RANGE, false, ObjectKind.RANGE.label))
+		String instruction = TaskPriorities.formatCookLabel(raw);
+		holdForHomeStorage(instruction);
+		if (targeting.lastRoute == null || !guidance.routing.targetService(ObjectKind.RANGE, false, instruction))
+			return true;
+		if (guidance.canCraft(plan))
+			guidance.next.previewStation(plan, ObjectKind.BOWL);
+		else if (plan.needsWater())
+			guidance.next.previewStation(plan, ObjectKind.WATER);
+		else
 			guidance.next.previewDeparture(plan);
 		return true;
 	}
@@ -226,7 +234,7 @@ final class HomeSpace
 			guidance.routing.targetService(ObjectKind.BOWL, false, home.getInstruction());
 	}
 
-	/** Filling comes before cooking and storing, so storage never pre-empts it; the range is Next, not the pump's text. */
+	/** Filling comes before cooking and dropping fish, so the drop never pre-empts it; the range is Next, not the pump's text. */
 	private void fillVialsAtPump(Requirements plan)
 	{
 		holdForHomeStorage("Fill empty vials");
@@ -251,7 +259,7 @@ final class HomeSpace
 	}
 
 	/**
-	 * Without a staff after the opening (no frame), the departure after cooking and storing is the staff search, not
+	 * Without a staff after the opening (no frame), the departure after cooking and dropping fish is the staff search, not
 	 * the demi hunt: Next is the task applyPriorities then takes, in its order: an eligible enemy in this room, the room of
 	 * a known one, else the task update chose. False when a staff is held or due.
 	 */

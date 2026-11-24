@@ -121,11 +121,11 @@ public final class Instructions
 				&& !isShort(plan, Requirement.LINUM_TIRINUM)
 				&& inventory.getHeld(GAUNTLET_CRYSTAL_SHARD_HM) >= gear.armorSteps.get(0).shards)
 		{
-			actions.add(ArmorUpgrades.isUpgrade(gear.armorSteps.get(0)) ? UPGRADE_ACTION : "Craft missing T1 armor at home");
+			actions.add(ArmorUpgrades.isUpgrade(gear.armorSteps.get(0)) ? UPGRADE_ACTION : "Craft T1 armor at home");
 		}
 		if (gear.perfected < 2)
 		{
-			actions.add(gear.upgrades < 2 ? "Find distinct demi-boss upgrades" : "Craft your perfected weapons at home");
+			actions.add(gear.upgrades < 2 ? "Find weapon upgrades from demi-bosses" : "Craft your perfected weapons at home");
 		}
 		if (isShort(plan, Requirement.GRYM_LEAVES))
 		{
@@ -172,7 +172,7 @@ public final class Instructions
 		actions.addAll(later);
 	}
 
-	/** The action lines count the inventory alone: stored food and ground armor credits don't change their wording. */
+	/** The action lines count the inventory alone: food left at home and ground armor credits don't change their wording. */
 	private static boolean isShort(Requirements plan, Requirement resource) { return plan.getHeldRow(resource).getMissing() > 0; }
 
 	public boolean isFor(Requirements other) { return plan == other; }
