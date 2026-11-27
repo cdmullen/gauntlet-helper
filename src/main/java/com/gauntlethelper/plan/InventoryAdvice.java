@@ -195,6 +195,15 @@ public final class InventoryAdvice
 
 	public static Map<Integer, String> buildActions(Requirements plan, Inventory inv)
 	{
+		return buildActions(plan, inv, true);
+	}
+
+	/**
+	 * @param grindNow false in the first loop away from home: the dust is ground at home, so its stack doesn't take a
+	 *                 slot the loop's fish and materials need
+	 */
+	public static Map<Integer, String> buildActions(Requirements plan, Inventory inv, boolean grindNow)
+	{
 		Map<Integer, String> actions = new HashMap<>();
 		ArmorUpgrades worn = ArmorUpgrades.worn(inv);
 		for (ArmorSlot slot : ArmorSlot.values())
@@ -236,7 +245,7 @@ public final class InventoryAdvice
 			actions.put(GAUNTLET_POTION_UNFINISHED, InventoryCue.MIX);
 			actions.put(GAUNTLET_CRYSTAL_SHARD_CRUSHED_HM, InventoryCue.MIX);
 		}
-		int grind = PotionShardBudget.computeGrindQuantity(plan, inv);
+		int grind = grindNow ? PotionShardBudget.computeGrindQuantity(plan, inv) : 0;
 		if (grind > 0 && inv.getHeld(GAUNTLET_PESTLE) > 0)
 		{
 			actions.put(GAUNTLET_PESTLE, InventoryCue.grind(grind));

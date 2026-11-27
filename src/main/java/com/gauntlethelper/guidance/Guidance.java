@@ -561,6 +561,9 @@ public class Guidance
 	public boolean needsInitialDoorScan() { return orientation.isInitialDoorScanNeeded(); }
 	public GauntletMap getGauntletMap() { return gauntletMap; }
 	public OpeningRoute getOpening() { return opening; }
+
+	/** In the first loop, away from home: the Grind cue waits for home (InventoryAdvice.buildActions). */
+	public boolean isFirstLoopAway() { return opening.isActive() && !isAtHome(); }
 	public List<TileObject> getBarriers() { return barriers; }
 	/** Doorways for the Guaranteed demi doors labels: unlit, into an undiscovered guaranteed demi room, while an upgrade is missing and the setting is on. */
 	public List<DemiDoorway> getGuaranteedDemiDoorways() { return guaranteedDemiDoorways; }

@@ -411,7 +411,7 @@ final class TickHandler
 	private void setInventoryCues(ItemContainer inventory)
 	{
 		InventoryAdvice advice = plugin.inventoryAdvice;
-		plugin.inventoryActions = InventoryAdvice.buildActions(plugin.plan, plugin.snapshot);
+		plugin.inventoryActions = InventoryAdvice.buildActions(plugin.plan, plugin.snapshot, !plugin.guidance.isFirstLoopAway());
 		plugin.slotActions.clear();
 		Map<Integer, Integer> remaining = new HashMap<>(advice.getFinishedTools());
 		if (plugin.shouldShowHomeDrops())

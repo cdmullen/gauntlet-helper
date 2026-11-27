@@ -113,6 +113,8 @@ public final class Simulation
 
 	private final Map<Integer, Integer> held, worn;
 	private int used, peak, storedRaw, storedCooked, craftedPotions;
+	/** The first loop's forecast: dust is ground at home, not on the way (InventoryAdvice.buildActions). */
+	private boolean grindAtHomeOnly;
 	private final Requirements goal;
 	private final Goals goals;
 	private final List<Operation> operations = new ArrayList<>();
@@ -130,11 +132,19 @@ public final class Simulation
 		this.storedCooked = Math.max(0, storedCooked);
 	}
 
+	/** The first loop's forecast: no grinding away from home, as the loop shows no Grind cue. */
+	public Simulation withGrindAtHomeOnly()
+	{
+		grindAtHomeOnly = true;
+		return this;
+	}
+
 	public Simulation copy()
 	{
 		Simulation copy = new Simulation(goal, snapshot(), storedRaw, storedCooked);
 		copy.peak = peak;
 		copy.craftedPotions = craftedPotions;
+		copy.grindAtHomeOnly = grindAtHomeOnly;
 		copy.markDirty();
 		return copy;
 	}
@@ -344,7 +354,8 @@ public final class Simulation
 			if (hasWater)
 				fillVials();
 			addGrymLeaves();
-			grindDust();
+			if (atHome || !grindAtHomeOnly)
+				grindDust();
 			finishPotions();
 			if (hasRange && count(GAUNTLET_RAW_FOOD) > 0)
 				cookFish(cookTarget);

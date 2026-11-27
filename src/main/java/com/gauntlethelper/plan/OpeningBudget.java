@@ -137,7 +137,7 @@ public final class OpeningBudget
 		int missing = plan.getRow(Requirement.FISH).getMissing();
 		for (int extra = missing; extra >= 0; extra--)
 		{
-			Simulation sim = new Simulation(plan, plan.getInventory(), plan.getStoredFood(), 0);
+			Simulation sim = new Simulation(plan, plan.getInventory(), plan.getStoredFood(), 0).withGrindAtHomeOnly();
 			sim.forecastAcquire(GAUNTLET_RAW_FOOD, extra);
 			int gathering = 0;
 			// Reserve actual remaining opening ingredients even before their rooms have been seen.
@@ -161,8 +161,10 @@ public final class OpeningBudget
 			sim.normalize(false, false, false);
 			if (sim.getPeakSlots() > limit)
 				continue;
+			// At home a full bag starts no return, and a craft without room waits while fish are cooked and dropped, so the
+			// home visit may use the 28th slot.
 			sim.normalize(true, true, false);
-			if (sim.getPeakSlots() > limit)
+			if (sim.getPeakSlots() > Inventory.SIZE)
 				continue;
 			Simulation.Capacity trip = Simulation.computeCapacity(sim.plan(), sim.snapshot(), true, sim.getStoredRaw(), sim.getStoredCooked());
 			// Fish are dropped at home. Keep real non-food acquisitions feasible.
