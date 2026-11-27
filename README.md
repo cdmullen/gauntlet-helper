@@ -2,8 +2,8 @@
 
 # Gauntlet Helper
 
-A [RuneLite](https://runelite.net) plugin that guides the preparation phase of a **Corrupted Gauntlet** or **regular
-Gauntlet** run (no armor or full T1, T2 or T3 armor), in the style of Quest Helper: it shows what to do now, what comes next, and where to go.
+A [RuneLite](https://runelite.net) plugin that works like Quest Helper for Gauntlet prep, in both the **Corrupted** and
+**regular Gauntlet**.
 
 ![The overlay panel during the five-room opening: the bark to chop is outlined, with the path to it and the next door previewed](docs/screenshots/opening-panel.png)
 
@@ -15,58 +15,38 @@ Gauntlet** run (no armor or full T1, T2 or T3 armor), in the style of Quest Help
 
 ## What it does
 
-The plugin follows one preparation plan: full T1 armor (or none, T2 or T3 with the Armor goal setting), a perfected staff plus a perfected
-bow or halberd, 20 cooked paddlefish and two potions (one per Grym leaf, none with 0). Along the way it:
+Full Gauntlet prep guidance for resources, weapons, armor, food and potions, all configurable in Setup.
 
-- **Plans the five-room opening.** It starts with the nearer of the two side rooms (to one side of the line towards
-  Hunllef, never the room straight opposite) and walks the U-shaped circle of five rooms around the starting room,
-  gathering what each room offers before lighting the next door.
-- **Highlights the current task and previews the next one.** The current task (teal by default) gets an outline,
-  a short caption such as *Light room* or *Defeat*, and a walking path. The next task gets a faint outline
-  and a thin path from where the current one ends. A panel line shows the current phase: first loop, home
-  preparation, demi hunting, finishing resources, returning home, final preparation, ready.
-- **Orders resources within a room.** Ore, bark, linum tirinum, Grym leaves and fishing spots are toured in an order that also
-  accounts for the room's exit, and only as many nodes as the remaining requirement needs. Resource nodes are
-  outlined by type and stop being colored once you have enough.
-- **Picks kill objectives.** Rats, bats and spiders become *Defeat* objectives when you still need shards or weapon
-  frames. Larger mobs only become objectives late, when much of the shard total is still missing. All six ordinary
-  enemy types keep a gray tile marker.
-- **Guides home visits.** At the starting room it marks the singing bowl's recipes: teal to craft now, plain for
-  wanted but not crafted now, dimmed gray for not needed. Crafts follow a fixed order: basic staff, attuned staff, T1 armor, upgraded weapons, then vials (and the armor upgrades last, with the T2 or T3 goal). Filling vials, cooking at the range and leaving surplus fish
-  on the floor follow. Inventory items to drop get red squares; items to equip, fill, mix or grind get colored
-  outlines.
-- **Hunts the demi-bosses.** After the first home visit it heads outward and searches the perimeter rooms for the
-  demi-bosses whose drops you still need. A living demi you need gets a clickbox and a *Defeat* caption, and the
-  guide waits in that room until the drop is picked up. The hunt ends when you hold the upgrades, not after a fixed
-  number of kills.
-- **Handles food last.** Fish left at home only becomes a pickup once gear, potions and the fish total are done.
-  The prep timer drives return-home advice (90 seconds left by default).
-- **Guards entry with raw fish.** While you hold raw paddlefish, Pass and Quick-pass on Hunllef's barrier move below
-  Walk here, so a left click doesn't take you in with uncooked food; right-click to enter anyway.
-- **Reorders ground-item menus.** With **Reorder ground items** on, the Take of an item with a teal name moves above
-  the other Takes on a tile. Entries are only reordered, never removed.
-- **Can hide the game's Time Left box.** **Hide the game's Time Left box** (off by default) hides it so the Timers overlay
-  shows the time once; it comes back when the setting is off or you leave.
-- **Works in both Gauntlets.** The regular Gauntlet gets the same guidance and the same goal settings (a lower
-  Paddlefish target is usually enough there), its 10:00 of prep time, and the inner ring searched first for
-  materials as well as fish, since the regular ring holds a guaranteed room for each.
-- **Optional Hunllef tiles.** During the boss fight it can color Hunllef's tile by the protection prayer Hunllef has
-  active (red melee, green ranged, blue magic) and outline tornado tiles. These visuals are adapted from The
-  Gauntlet plugin (see Credits). It can also mark a fixed set of tiles in Hunllef's room (off by default), the same
-  tiles as the Tile Packs plugin's Hunllef pack, and redraw Hunllef's prayer-disable orb as another boss's projectile,
-  as the Hunllef Projectiles plugin does.
+- **Current and next tasks.** The current task is highlighted with a path to it, and the next one is previewed.
+- **Starting 5-room loop.** Guides you around the five rooms next to the starting room.
+- **Resource pathing.** Paths between the resources you still need in each room.
+- **Kill targets.** Marks the enemy to kill when you need shards or weapon frames.
+- **Crafting at home.** Highlights the singing bowl recipes to craft and the items to fill, cook, equip or drop.
+- **Demi-boss guidance.** After your first trip home, it points you toward the demis whose drops you still need,
+  labels doors into the guaranteed demi rooms and marks the demi to fight.
+- **Low prep time warning.** When the prep timer runs low (90 seconds left by default, set by **Return warning
+  seconds**), it tells you to head home.
+- **Blocks entering Hunllef with raw fish.** While you hold raw paddlefish, a left click on Hunllef's barrier walks
+  instead of entering. Right-click to enter anyway.
+- **Reorders ground item pickup by needed items.** On a tile with several items, a left click takes the one you need
+  first (**Reorder ground items**). Nothing is removed from the menu.
+- **Works in both Gauntlets.** The regular Gauntlet gets the same guidance and settings.
+- **Hunllef fight extras.** Hunllef's tile is colored by the prayer it's protecting with (red melee, green ranged,
+  blue magic) and tornado tiles are outlined, as in The Gauntlet plugin. Optional: tile markers in Hunllef's room
+  (the Tile Packs plugin's Hunllef pack), Hunllef's prayer-disable orb redrawn as another boss's projectile (as in
+  Hunllef Projectiles) and hiding the game's Time Left box.
 
 ## Conflicts with other plugins
 
-Gauntlet Helper is meant to be the one plugin you need for a Gauntlet run, so it has its own versions of the highlights these plugins draw, some adapted from them (see Credits). To avoid drawing them twice, it declares a conflict with The Gauntlet, Gauntlet Minimap, Gauntlet Crafting, Hunllef Projectiles and Gauntlet Map from the Plugin Hub (Gauntlet Map draws a room map, and this plugin has its own, which is off until you turn it on in Overlay): enabling one switches the other off.
+Gauntlet Helper already draws what these Plugin Hub plugins do, so it can't run alongside them: The Gauntlet,
+Gauntlet Minimap, Gauntlet Crafting, Hunllef Projectiles and Gauntlet Map. Turning one on turns the other off. (Its
+own room map, like Gauntlet Map's, is off until you turn on **Map overlay**.)
 
 ## Main settings
 
-Only the first section, Setup (the weapon pair, the armor goal and how much food and potion to prepare, in either
-Gauntlet), opens by default. Everything else works as it is.
-
-Colors, tracker displays (overlay, infobox, both or hidden), resource outlines and minimap markers are all
-configurable. Every setting and its default is listed in [docs/product/SETTINGS.md](docs/product/SETTINGS.md).
+Setup is the section to look at: your weapon pair, armor goal, and how much food and how many potions to make.
+Everything else works out of the box. Colors, displays, outlines and minimap markers can all be changed; every
+setting is listed in [docs/product/SETTINGS.md](docs/product/SETTINGS.md).
 
 ## Limits
 
@@ -77,16 +57,14 @@ configurable. Every setting and its default is listed in [docs/product/SETTINGS.
 
 ## Privacy
 
-The plugin sends nothing anywhere. The **Log attempts** setting (off by default) writes each attempt to
-`~/.runelite/plugin-data/gauntlet-helper/attempts` on your own computer, one line per game tick with what changed: your position,
-inventory, the scene and the guidance shown. It is meant for attaching to bug reports. The newest 50 recordings are kept (setting **Keep recordings**;
-0 keeps them all).
+Nothing is recorded unless you turn on **Log attempts** (off by default). Recordings are saved only on your computer,
+in `~/.runelite/plugin-data/gauntlet-helper/attempts`, for attaching to bug reports, and the newest 50 are kept
+(**Keep recordings**; 0 keeps all). The plugin makes no network connections.
 
 ## Contributing
 
-Bug reports and pull requests are welcome. Not every in-game situation has been seen yet. For a guidance bug, a
-recording of the attempt (Log attempts on) makes it much easier to reproduce: it shows exactly what the plugin saw and
-said at every tick.
+Bug reports and pull requests are welcome; not every in-game situation has been seen yet. For a guidance bug,
+attach a recording of the attempt (Log attempts on): it shows exactly what the plugin saw and said.
 
 [CONTRIBUTING.md](CONTRIBUTING.md) covers a map of the code, the rules a change has to respect and how pull requests are handled.
 
