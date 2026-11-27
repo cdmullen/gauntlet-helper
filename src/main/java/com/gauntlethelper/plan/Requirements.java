@@ -383,14 +383,17 @@ public final class Requirements
 
 	/**
 	 * Choose one affordable next recipe in the menu. Basic weapons (free from a frame), then the upgrades, then T1
-	 * armor (the attuned staff comes before armor), vials, and last the goal's next armor upgrade from spare shards.
+	 * armor (the attuned staff comes before armor; with the T1 and T2 goals also the vials and dust), vials, and last
+	 * the goal's next armor upgrade from spare shards.
 	 */
 	private void addCrafts(Gear gear, Supplies supplies)
 	{
 		addWeaponCrafts(gear, true);
 		addWeaponCrafts(gear, false);
+		int armorHoldback = PotionShardBudget.computeArmorHoldback(this, inventory);
 		for (ArmorUpgrades.Step step : gear.armorSteps)
-			if (!ArmorUpgrades.isUpgrade(step) && canAffordArmor(step))
+			if (!ArmorUpgrades.isUpgrade(step) && canAffordArmor(step)
+					&& inventory.getHeld(GAUNTLET_CRYSTAL_SHARD_HM) - step.shards >= armorHoldback)
 				craftItems.add(step.itemId);
 		if (supplies.batches > supplies.vials && PotionShardBudget.canBuyVial(this, inventory))
 			craftItems.add(GAUNTLET_VIAL_EMPTY_HM);
@@ -767,7 +770,8 @@ public final class Requirements
 	private HomeCraftPlan computeHomeCrafts(Inventory holdings)
 	{
 		return new HomeCraftPlan(holdings, getRow(Requirement.VIALS).getMissing(), needsOpeningStaff(), gear.desired, groundArmor,
-				isFoodBeforeUpgrades() ? Collections.emptyList() : findArmorUpgrades(), getUpgradeShardSpare(), ArmorUpgrades.getBaseGoal(getArmorGoal()));
+				isFoodBeforeUpgrades() ? Collections.emptyList() : findArmorUpgrades(), getUpgradeShardSpare(), getArmorGoal(),
+				PotionShardBudget.computeDustReserve(this));
 	}
 
 	/** The home visit's crafts still short of a slot once these items are dropped. */

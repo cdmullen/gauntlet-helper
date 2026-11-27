@@ -394,15 +394,20 @@ public final class Simulation
 	}
 
 	/**
-	 * Basic staff, the attuned staff when affordable, then armor from what is left, the selected
-	 * perfected weapon pair, then vials.
+	 * Basic staff, the attuned staff when affordable, then armor from what is left, the selected perfected weapon pair,
+	 * then vials. With the T1 and T2 Armor goals the vials come right after the staff and the armor keeps the dust's
+	 * shards, as in HomeCraftPlan.
 	 */
 	private void craftAtHome()
 	{
 		craftStaff();
+		boolean vialsFirst = PotionShardBudget.isVialsBeforeArmor(goal.getArmorGoal());
+		if (vialsFirst)
+			craftVials();
 		craftArmor();
 		craftWeapons();
-		craftVials();
+		if (!vialsFirst)
+			craftVials();
 		craftUpgrades();
 	}
 
@@ -419,7 +424,11 @@ public final class Simulation
 	private void craftArmor()
 	{
 		for (ArmorUpgrades.Step step : ArmorUpgrades.of(this::getOwned).findSteps(ArmorUpgrades.getBaseGoal(goal.getArmorGoal())))
+		{
+			if (count(GAUNTLET_CRYSTAL_SHARD_HM) - step.shards < PotionShardBudget.computeArmorHoldback(plan(), snapshot()))
+				return;
 			craft(step.itemId, step.label.toLowerCase(Locale.ROOT));
+		}
 	}
 
 	/** The armor goal's upgrades after the vials, once the T1 base is made, from the shards no other need takes. */

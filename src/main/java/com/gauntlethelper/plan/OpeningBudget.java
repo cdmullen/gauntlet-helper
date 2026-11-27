@@ -44,8 +44,15 @@ import static net.runelite.api.gameval.ItemID.GAUNTLET_RAW_FOOD;
 public final class OpeningBudget
 {
 	private OpeningBudget() { }
+	/**
+	 * Shards the loop's kills gather for the first home visit. With the T1 and T2 Armor goals none: the loop's only kill
+	 * is the staff frame and gathering funds the first home visit. With T3 and None, the attuned staff and the T1 armor
+	 * the loop's materials cover.
+	 */
 	public static int computeShardTarget(Requirements plan, GauntletMap map, OpeningRoute opening)
 	{
+		if (PotionShardBudget.isVialsBeforeArmor(plan.getArmorGoal()))
+			return 0;
 		int[] have = {plan.getRow(Requirement.ORE).have, plan.getRow(Requirement.BARK).have, plan.getRow(Requirement.LINUM_TIRINUM).have};
 		Requirement[] materials = {Requirement.ORE, Requirement.BARK, Requirement.LINUM_TIRINUM};
 		for (Point at : opening.getRemainingRooms())
@@ -145,7 +152,9 @@ public final class OpeningBudget
 				sim.forecastAcquire(GAUNTLET_GENERIC_COMPONENT_HM, 1);
 				gathering++;
 			}
-			int shards = Math.max(0, firstHomeShards - plan.getInventory().getHeld(GAUNTLET_CRYSTAL_SHARD_HM));
+			// Gathering brings shards whatever the target, so their stack keeps its slot.
+			int held = plan.getInventory().getHeld(GAUNTLET_CRYSTAL_SHARD_HM);
+			int shards = Math.max(held == 0 && gathering > 0 ? 1 : 0, firstHomeShards - held);
 			sim.forecastAcquire(GAUNTLET_CRYSTAL_SHARD_HM, shards);
 			gathering += shards;
 			int limit = gathering > 0 ? Inventory.SIZE - 1 : Inventory.SIZE;
@@ -236,7 +245,7 @@ public final class OpeningBudget
 	public static boolean hasHomeWork(Requirements plan, List<Requirements.Craft> crafts)
 	{
 		HomeCraftPlan craft = new HomeCraftPlan(plan.getInventory(), plan.getRow(Requirement.VIALS).getMissing(), plan.needsOpeningStaff(),
-				Collections.emptyList(), Collections.emptySet(), Collections.emptyList(), 0, ArmorUpgrades.getBaseGoal(plan.getArmorGoal()));
+				Collections.emptyList(), Collections.emptySet(), Collections.emptyList(), 0, plan.getArmorGoal(), PotionShardBudget.computeDustReserve(plan));
 		Inventory inv = plan.getInventory();
 		boolean weaponUpgrade = false;
 		for (Requirements.Craft recipe : crafts)

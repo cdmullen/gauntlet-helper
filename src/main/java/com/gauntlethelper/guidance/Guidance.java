@@ -336,17 +336,23 @@ public class Guidance
 	{
 		// Read before the post-loop step, which may end the loop.
 		boolean openingActive = opening.isActive();
-		// At home, every bowl craft (perfected weapons, more vials) comes before filling vials.
-		craftBeforeWater = opening.isInitialized() && isHomeTile(player.getWorldLocation()) && canCraft(plan);
-		boolean claimed = fillVials(plan) || objectTask.updatePostLoop(plan, route, view, player);
+		// At home, every bowl craft (perfected weapons, more vials) comes before filling vials. The home latch is read
+		// after this step, so the player's tile decides here.
+		boolean home = isHomeTile(player.getWorldLocation());
+		craftBeforeWater = opening.isInitialized() && home && canCraft(plan);
+		boolean claimed = fillVials(plan, home) || objectTask.updatePostLoop(plan, route, view, player);
 		if (!claimed && !plan.isReady() && !plan.isInventoryAction())
 			objectTask.chooseTarget(plan, route, view, player, openingActive);
 		orientation.endInitialDoorScanIfTargeted(targeting.target);
 	}
 
-	private boolean fillVials(Requirements plan)
+	/**
+	 * Away from home a fishing spot fills vials too; at home only the pump does, so the fill never leads out of home,
+	 * where a full inventory would send the player straight back.
+	 */
+	private boolean fillVials(Requirements plan, boolean home)
 	{
-		return isUseful(ObjectKind.WATER, plan) && routing.targetService(ObjectKind.WATER, true, "Fill empty vials");
+		return isUseful(ObjectKind.WATER, plan) && routing.targetService(ObjectKind.WATER, !home, "Fill empty vials");
 	}
 
 	/**

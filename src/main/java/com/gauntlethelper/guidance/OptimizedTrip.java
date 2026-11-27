@@ -222,7 +222,7 @@ final class OptimizedTrip
 		if (first.kind == Simulation.Kind.CRAFT)
 			return craftHere(context, first, current);
 		if (first.kind == Simulation.Kind.FILL)
-			return useServiceOrNull(context.findServiceTask(ObjectKind.WATER, true), first.label);
+			return useServiceOrNull(context.findServiceTask(ObjectKind.WATER, !context.isAtHome()), first.label);
 		if (first.kind == Simulation.Kind.COOK && !context.canCraft())
 			return useServiceOrNull(context.findServiceTask(ObjectKind.RANGE, false), first.label);
 		if (first.kind == Simulation.Kind.GATHER)
