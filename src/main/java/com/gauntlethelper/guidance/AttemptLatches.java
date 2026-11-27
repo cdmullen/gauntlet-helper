@@ -71,6 +71,9 @@ final class AttemptLatches
 	private FirstHome firstHome = FirstHome.CIRCLE;
 	private boolean firstHomeArrived;
 
+	/** Time low at home left an armor upgrade the held shards can't pay for: it stays out of reach until the attempt ends. */
+	private boolean upgradesOutOfReach;
+
 	// Instruction text: the current task's own wording, shown instead of the target's label.
 	private String postLoopInstruction;
 
@@ -90,6 +93,7 @@ final class AttemptLatches
 		outerRoomChecked = false;
 		firstHome = FirstHome.CIRCLE;
 		firstHomeArrived = false;
+		upgradesOutOfReach = false;
 		postLoopInstruction = null;
 	}
 
@@ -138,6 +142,8 @@ final class AttemptLatches
 	}
 
 	void startHomeReturn() { homeReturn = true; }
+	boolean isUpgradesOutOfReach() { return upgradesOutOfReach; }
+	void latchUpgradesOutOfReach() { upgradesOutOfReach = true; }
 	void startStaffReturn() { staffReturn = true; }
 	void startTripTeleport() { tripTeleport = true; }
 	void startOutwardTrip() { outwardTrip = true; }

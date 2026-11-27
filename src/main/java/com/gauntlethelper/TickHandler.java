@@ -359,6 +359,15 @@ final class TickHandler
 		plugin.clock.observe(GauntletTimeLeft.read(plugin.client), plugin.client.getTickCount());
 		if (isTimeLow())
 			plugin.plan = plugin.plan.withUpgradesDeferred();
+		// No fight starts at home at low time, so an upgrade the held shards can't pay for there is out of reach for the
+		// rest of the attempt, also a step past home's edge (latched).
+		if (plugin.plan.isUpgradesDeferred() && (guidance.isAtHome() || guidance.isUpgradesOutOfReach()))
+		{
+			Requirements reachable = plugin.plan.withOutOfReachUpgradesDropped();
+			if (reachable != plugin.plan)
+				guidance.latchUpgradesOutOfReach();
+			plugin.plan = reachable;
+		}
 		// At home the bowl crafts come before equipping what they made (home is last tick's, read before the update).
 		if (guidance.isAtHome())
 		{
@@ -411,7 +420,7 @@ final class TickHandler
 	private void setInventoryCues(ItemContainer inventory)
 	{
 		InventoryAdvice advice = plugin.inventoryAdvice;
-		plugin.inventoryActions = InventoryAdvice.buildActions(plugin.plan, plugin.snapshot);
+		plugin.inventoryActions = InventoryAdvice.buildActions(plugin.plan, plugin.snapshot, !plugin.guidance.isFirstLoopAway());
 		plugin.slotActions.clear();
 		Map<Integer, Integer> remaining = new HashMap<>(advice.getFinishedTools());
 		if (plugin.shouldShowHomeDrops())

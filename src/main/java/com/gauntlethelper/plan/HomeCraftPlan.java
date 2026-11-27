@@ -62,19 +62,28 @@ public final class HomeCraftPlan
 	private final List<Requirements.Craft> wanted;
 	/** After the base crafts and vials: the forecast owns the T1 base and the staff, so upgrades may follow. */
 	private boolean baseArmorDone;
+	private final int armorGoal;
 	private final int baseArmorGoal;
+	/** The T1 and T2 goals: vials come right after the staff, and the T1 armor takes the shards the vials and dust leave. */
+	private final boolean vialsFirst;
+	private final int dustShards;
 
 	/**
 	 * @param upgradeTypes  selected weapon types; any whose upgrade component is held is crafted up to perfected before vials
 	 * @param groundArmor   armor slots whose piece lies on the ground: picked up instead
 	 * @param armorUpgrades the armor goal's steps above basic still to make (Requirements.findArmorUpgrades), crafted last
 	 * @param upgradeSpare  held shards beyond every other need (Requirements.getUpgradeShardSpare): the upgrades' budget
-	 * @param baseArmorGoal the armor base made before the vials (ArmorUpgrades.getBaseGoal): T1, or none for the None goal
+	 * @param armorGoal     the Armor goal (Requirements.getArmorGoal); its T1 base is the armor made here
+	 * @param dustShards    shards the potions still to craft need for dust (PotionShardBudget.computeDustReserve), kept
+	 *                      from the T1 armor with the T1 and T2 goals
 	 */
 	public HomeCraftPlan(Inventory inventory, int missingVials, boolean needStaff, List<WeaponType> upgradeTypes, Set<ArmorSlot> groundArmor,
-			List<ArmorUpgrades.Step> armorUpgrades, int upgradeSpare, int baseArmorGoal)
+			List<ArmorUpgrades.Step> armorUpgrades, int upgradeSpare, int armorGoal, int dustShards)
 	{
-		this.baseArmorGoal = baseArmorGoal;
+		this.armorGoal = armorGoal;
+		baseArmorGoal = ArmorUpgrades.getBaseGoal(armorGoal);
+		vialsFirst = PotionShardBudget.isVialsBeforeArmor(armorGoal);
+		this.dustShards = dustShards;
 		start = inventory;
 		// Shards and materials choose the visit's crafts; slots only decide their order and how many fit now, so a
 		// nearly full inventory doesn't limit a bowl visit to one vial or armor piece.
@@ -85,7 +94,8 @@ public final class HomeCraftPlan
 		planned.clear();
 		forecast = inventory;
 		schedule();
-		notes.add("Vials after gear: " + countPlanned(GAUNTLET_VIAL_EMPTY_HM) + "/" + missingVials + " craftable (10 shards + 1 slot each)");
+		String vialsAfter = vialsFirst ? "Vials after the staff: " : "Vials after gear: ";
+		notes.add(vialsAfter + countPlanned(GAUNTLET_VIAL_EMPTY_HM) + "/" + missingVials + " craftable (10 shards + 1 slot each)");
 	}
 
 	private void select(Inventory inventory, int missingVials, boolean needStaff, List<WeaponType> upgradeTypes, Set<ArmorSlot> groundArmor)
@@ -98,7 +108,8 @@ public final class HomeCraftPlan
 		boolean hasArmorMaterials = inventory.getHeld(GAUNTLET_ORE_HM) >= armorMaterials
 				&& inventory.getHeld(GAUNTLET_BARK_HM) >= armorMaterials
 				&& inventory.getHeld(GAUNTLET_FIBRE_HM) >= armorMaterials;
-		notes.add(armorSteps.isEmpty() ? "T1 armor: complete" : "T1 armor after the attuned staff: "
+		String armorAfter = vialsFirst ? "T1 armor after the staff, vials and dust: " : "T1 armor after the attuned staff: ";
+		notes.add(armorSteps.isEmpty() ? "T1 armor: complete" : armorAfter
 				+ armorShards + " shards"
 				+ (hasArmorMaterials && afterStaff >= armorShards ? " (materials/shards ready)" : " (need "
 				+ Math.max(0, armorShards - afterStaff) + " more shards"
@@ -108,8 +119,14 @@ public final class HomeCraftPlan
 			append(GAUNTLET_MAGIC_T1_HM, "Basic staff");
 		if (!staffReady && forecast.getOwned(GAUNTLET_MAGIC_T1_HM) > 0)
 			append(GAUNTLET_MAGIC_T2_HM, "Attuned staff");
+		int vials = vialsFirst ? appendVials(missingVials, needStaff, upgradeTypes) : 0;
 		for (ArmorUpgrades.Step step : armorSteps)
+		{
+			if (vialsFirst && forecast.getHeld(GAUNTLET_CRYSTAL_SHARD_HM) - step.shards
+					< PotionShardBudget.computeArmorHoldback(armorGoal, !isStaffReadyAfter(needStaff), missingVials - vials, dustShards))
+				break;
 			append(step.itemId, step.label);
+		}
 		// A held upgrade component means the hunt found it: finish that weapon before vials, cooking or filling.
 		for (WeaponType type : upgradeTypes)
 		{
@@ -124,13 +141,22 @@ public final class HomeCraftPlan
 				append(attuned, "Attuned " + type.getLabel());
 			append(perfected, "Perfected " + type.getLabel());
 		}
-		// A weapon the shards couldn't attune keeps its attuned-tier shards away from vials (the same check as
-		// Requirements.addCrafts, so the bowl task and its marked recipe agree).
+		if (!vialsFirst)
+			appendVials(missingVials, needStaff, upgradeTypes);
+		baseArmorDone = ArmorUpgrades.owned(forecast).isComplete(baseArmorGoal) && isStaffReadyAfter(needStaff);
+	}
+
+	/**
+	 * The missing vials the shards allow. A weapon the shards couldn't attune keeps its attuned-tier shards away from
+	 * vials (the same check as Requirements.addCrafts, so the bowl task and its marked recipe agree).
+	 */
+	private int appendVials(int missingVials, boolean needStaff, List<WeaponType> upgradeTypes)
+	{
 		int count = 0;
-		while (count < missingVials && PotionShardBudget.canBuyVial(forecast, needStaff, baseArmorGoal, upgradeTypes)
+		while (count < missingVials && PotionShardBudget.canBuyVial(forecast, needStaff, armorGoal, upgradeTypes)
 				&& append(GAUNTLET_VIAL_EMPTY_HM, "Crystal vial (" + (missingVials - count) + " needed)"))
 			count++;
-		baseArmorDone = ArmorUpgrades.owned(forecast).isComplete(baseArmorGoal) && isStaffReadyAfter(needStaff);
+		return count;
 	}
 
 	private boolean isStaffReadyAfter(boolean needStaff)
@@ -170,8 +196,8 @@ public final class HomeCraftPlan
 
 	/**
 	 * Craft the chosen items in priority order, except that an item without room waits while a later one that fits
-	 * (an upgrade that uses up a component, armor that uses the last material stacks) frees a slot for it. Vials
-	 * never go ahead of gear, and armor upgrades never go ahead of vials. Whatever still has no room is left for after
+	 * (an upgrade that uses up a component, armor that uses the last material stacks) frees a slot for it. With the T3
+	 * and None goals vials never go ahead of gear; armor upgrades never go ahead of vials. Whatever still has no room is left for after
 	 * making space.
 	 */
 	private void schedule()
@@ -201,12 +227,15 @@ public final class HomeCraftPlan
 		}
 	}
 
-	/** Bowl order groups: gear first, then vials, then armor upgrades. */
-	private static int getRank(int itemId)
+	/**
+	 * Bowl order groups: the staff, vials and base gear first, then armor upgrades. With the T3 and None goals vials are
+	 * their own group after the gear.
+	 */
+	private int getRank(int itemId)
 	{
 		if (isArmorUpgrade(itemId))
 			return 2;
-		return itemId == GAUNTLET_VIAL_EMPTY_HM ? 1 : 0;
+		return itemId == GAUNTLET_VIAL_EMPTY_HM && !vialsFirst ? 1 : 0;
 	}
 
 	/**
@@ -353,6 +382,12 @@ public final class HomeCraftPlan
 
 	/** Crafts the shards and materials allow but the free slots don't yet: cooking and dropping fish first helps. */
 	public int countWaitingForSpace() { return wanted.size() - planned.size(); }
+
+	/** How many of this item the shards and materials choose for the visit, whether or not it has room yet. */
+	public int countWanted(int itemId)
+	{
+		return (int) wanted.stream().filter(craft -> craft.itemId == itemId).count();
+	}
 
 	/** How many of this item the visit's plan crafts (vials repeat, one entry each). */
 	public int countPlanned(int itemId)

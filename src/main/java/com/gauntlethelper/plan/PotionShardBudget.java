@@ -36,19 +36,33 @@ import static net.runelite.api.gameval.ItemID.GAUNTLET_MAGIC_T2_HM;
 import static net.runelite.api.gameval.ItemID.GAUNTLET_MAGIC_T3_HM;
 
 /**
- * Potion spending never consumes shards reserved for the attuned staff and full T1 armor, which is made after the
- * staff from the shards left, nor the attuned tier of a selected weapon whose upgrade component is held.
+ * Potion spending never consumes shards reserved for the attuned staff, nor the attuned tier of a selected weapon whose
+ * upgrade component is held. With the T1 and T2 Armor goals the vials and dust come before the T1 armor, which takes the
+ * shards left; with T3 and None the full T1 armor is reserved ahead of them too.
  */
 public final class PotionShardBudget
 {
 	private PotionShardBudget() { }
 	public static boolean needsStaff(Requirements plan)
 	{ return plan.needsOpeningStaff(); }
-	/** @param baseGoal the armor base reserved (ArmorUpgrades.getBaseGoal): T1, or none for the None goal */
-	public static int computeGearReserve(Inventory inventory, boolean needStaff, int baseGoal)
+
+	/** The Armor goals whose vials and dust come before the T1 armor: T1 and T2. */
+	public static boolean isVialsBeforeArmor(int armorGoal)
+	{
+		return armorGoal == ArmorUpgrades.T1 || armorGoal == ArmorUpgrades.T2;
+	}
+
+	/**
+	 * The attuned staff while it is still needed; with the T3 and None goals also the missing T1 armor.
+	 *
+	 * @param armorGoal the Armor goal (Requirements.getArmorGoal)
+	 */
+	public static int computeGearReserve(Inventory inventory, boolean needStaff, int armorGoal)
 	{
 		int reserve = needStaff && inventory.getOwned(GAUNTLET_MAGIC_T2_HM) + inventory.getOwned(GAUNTLET_MAGIC_T3_HM) == 0 ? HomeCraftPlan.ATTUNE_SHARDS : 0;
-		return reserve + ArmorUpgrades.owned(inventory).computeShards(baseGoal);
+		if (isVialsBeforeArmor(armorGoal))
+			return reserve;
+		return reserve + ArmorUpgrades.owned(inventory).computeShards(ArmorUpgrades.getBaseGoal(armorGoal));
 	}
 
 	/**
@@ -67,15 +81,38 @@ public final class PotionShardBudget
 	}
 
 	/** One vial's shards are left over after the gear and weapon reserves; Requirements and HomeCraftPlan both ask this. */
-	public static boolean canBuyVial(Inventory inventory, boolean needStaff, int baseGoal, List<WeaponType> weaponTypes)
+	public static boolean canBuyVial(Inventory inventory, boolean needStaff, int armorGoal, List<WeaponType> weaponTypes)
 	{
-		return inventory.getHeld(GAUNTLET_CRYSTAL_SHARD_HM) >= computeGearReserve(inventory, needStaff, baseGoal)
+		return inventory.getHeld(GAUNTLET_CRYSTAL_SHARD_HM) >= computeGearReserve(inventory, needStaff, armorGoal)
 				+ computeWeaponReserve(inventory, needStaff, weaponTypes) + Recipes.SHARDS_PER_VIAL;
 	}
 
 	public static boolean canBuyVial(Requirements plan, Inventory inventory)
 	{
-		return canBuyVial(inventory, needsStaff(plan), ArmorUpgrades.getBaseGoal(plan.getArmorGoal()), plan.getDesiredWeaponTypes());
+		return canBuyVial(inventory, needsStaff(plan), plan.getArmorGoal(), plan.getDesiredWeaponTypes());
+	}
+
+	/** The shards for the dust the potions still to craft need, in whole grind batches; none with no potion left to craft. */
+	public static int computeDustReserve(Requirements plan)
+	{
+		return getShardsForDust(plan.getRow(Requirement.DUST).getMissing());
+	}
+
+	/**
+	 * Shards the T1 armor leaves untouched: with the T1 and T2 goals the attuned staff while still needed, the missing
+	 * vials and the dust still to grind; nothing with T3 or None, whose armor comes before them.
+	 */
+	public static int computeArmorHoldback(int armorGoal, boolean staffShort, int missingVials, int dustShards)
+	{
+		if (!isVialsBeforeArmor(armorGoal))
+			return 0;
+		return (staffShort ? HomeCraftPlan.ATTUNE_SHARDS : 0) + Math.max(0, missingVials) * Recipes.SHARDS_PER_VIAL + dustShards;
+	}
+
+	public static int computeArmorHoldback(Requirements plan, Inventory inventory)
+	{
+		return computeArmorHoldback(plan.getArmorGoal(), computeGearReserve(inventory, needsStaff(plan), plan.getArmorGoal()) > 0,
+				plan.getRow(Requirement.VIALS).getMissing(), computeDustReserve(plan));
 	}
 
 	public static int getShardsForDust(int missing)
@@ -84,7 +121,7 @@ public final class PotionShardBudget
 	}
 	public static int computeGrindQuantity(Requirements plan, Inventory inventory)
 	{
-		int reserve = computeGearReserve(inventory, needsStaff(plan), ArmorUpgrades.getBaseGoal(plan.getArmorGoal()))
+		int reserve = computeGearReserve(inventory, needsStaff(plan), plan.getArmorGoal())
 				+ plan.getRow(Requirement.VIALS).getMissing() * Recipes.SHARDS_PER_VIAL;
 		int shards = inventory.getHeld(GAUNTLET_CRYSTAL_SHARD_HM);
 		int quantity = Math.min(getShardsForDust(plan.getRow(Requirement.DUST).getMissing()),

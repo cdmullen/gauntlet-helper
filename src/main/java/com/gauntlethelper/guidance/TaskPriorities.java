@@ -404,12 +404,15 @@ final class TaskPriorities
 		return context.canWalkTo(GauntletMap.HOME) ? Decision.walkTo(GauntletMap.HOME, instruction) : Decision.CLAIM_ONLY;
 	}
 
-	/** Empty vials are filled next, except in the demi room objective or at home with a craft waiting. */
+	/**
+	 * Empty vials are filled next, except in the demi room objective or at home with a craft waiting. At home only the
+	 * pump fills them, never a fishing spot in the next room (as Guidance.fillVials).
+	 */
 	static Decision fillVials(TickContext context)
 	{
 		if (context.isInDemiObjective() || !context.plan.needsWater() || context.isAtHome() && context.canCraft())
 			return null;
-		Decision water = context.findServiceTask(ObjectKind.WATER, true);
+		Decision water = context.findServiceTask(ObjectKind.WATER, !context.isAtHome());
 		return water == null ? null : water.withInstruction("Fill empty vials");
 	}
 

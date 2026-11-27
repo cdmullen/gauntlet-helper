@@ -215,6 +215,12 @@ final class Sceptre
 	private boolean isSceptreDone(TickContext context)
 	{
 		Requirements plan = context.plan;
+		// Time low at home with the upgrades deferred: the barrier is next (TaskPriorities.goToBarrierWhenTimeLowAtHome).
+		if (context.urgent && plan.isUpgradesDeferred() && context.isAtHome() && !isSceptreNeeded(context))
+		{
+			state.latchCue();
+			return true;
+		}
 		if (!context.opening.isInitialized() || context.opening.isActive() || !plan.getRow(Requirement.UPGRADES).isComplete()
 				|| !plan.getRow(Requirement.SHARDS).isComplete() || !plan.getRow(Requirement.FRAMES).isComplete() || isSceptreNeeded(context)
 				|| isGatheringTripAhead(context))

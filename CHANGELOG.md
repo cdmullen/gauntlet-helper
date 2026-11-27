@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0
+
+### Changes
+
+- With T1 or T2 armor configured, the first loop now only includes a kill for the weapon frame. Gathering covers the shards for the first trip home. Also suggests crafting vials and making dust before T1 armor, so potions are made consistently every run.
+- In the first loop, grinding dust now waits until home instead of happening during the loop, leaving room for more fish.
+
+### Fixes
+
+- When configured for T2 armor, if time runs low at home and an armor upgrade can't be afforded, the guide now marks its shards and materials to drop instead of getting stuck on making inventory space.
+- After demi kills, the guide now recommends searching nearby rooms for remaining resources rather than teleporting home immediately.
+- On the teleport home after the demis, Next now lists everything still left to gather.
+- The README is shorter and easier to read.
+
 ## 1.1.0
 
 ### New

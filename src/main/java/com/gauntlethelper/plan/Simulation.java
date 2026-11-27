@@ -113,6 +113,8 @@ public final class Simulation
 
 	private final Map<Integer, Integer> held, worn;
 	private int used, peak, storedRaw, storedCooked, craftedPotions;
+	/** The first loop's forecast: dust is ground at home, not on the way (InventoryAdvice.buildActions). */
+	private boolean grindAtHomeOnly;
 	private final Requirements goal;
 	private final Goals goals;
 	private final List<Operation> operations = new ArrayList<>();
@@ -130,11 +132,19 @@ public final class Simulation
 		this.storedCooked = Math.max(0, storedCooked);
 	}
 
+	/** The first loop's forecast: no grinding away from home, as the loop shows no Grind cue. */
+	public Simulation withGrindAtHomeOnly()
+	{
+		grindAtHomeOnly = true;
+		return this;
+	}
+
 	public Simulation copy()
 	{
 		Simulation copy = new Simulation(goal, snapshot(), storedRaw, storedCooked);
 		copy.peak = peak;
 		copy.craftedPotions = craftedPotions;
+		copy.grindAtHomeOnly = grindAtHomeOnly;
 		copy.markDirty();
 		return copy;
 	}
@@ -344,7 +354,8 @@ public final class Simulation
 			if (hasWater)
 				fillVials();
 			addGrymLeaves();
-			grindDust();
+			if (atHome || !grindAtHomeOnly)
+				grindDust();
 			finishPotions();
 			if (hasRange && count(GAUNTLET_RAW_FOOD) > 0)
 				cookFish(cookTarget);
@@ -394,15 +405,20 @@ public final class Simulation
 	}
 
 	/**
-	 * Basic staff, the attuned staff when affordable, then armor from what is left, the selected
-	 * perfected weapon pair, then vials.
+	 * Basic staff, the attuned staff when affordable, then armor from what is left, the selected perfected weapon pair,
+	 * then vials. With the T1 and T2 Armor goals the vials come right after the staff and the armor keeps the dust's
+	 * shards, as in HomeCraftPlan.
 	 */
 	private void craftAtHome()
 	{
 		craftStaff();
+		boolean vialsFirst = PotionShardBudget.isVialsBeforeArmor(goal.getArmorGoal());
+		if (vialsFirst)
+			craftVials();
 		craftArmor();
 		craftWeapons();
-		craftVials();
+		if (!vialsFirst)
+			craftVials();
 		craftUpgrades();
 	}
 
@@ -419,7 +435,11 @@ public final class Simulation
 	private void craftArmor()
 	{
 		for (ArmorUpgrades.Step step : ArmorUpgrades.of(this::getOwned).findSteps(ArmorUpgrades.getBaseGoal(goal.getArmorGoal())))
+		{
+			if (count(GAUNTLET_CRYSTAL_SHARD_HM) - step.shards < PotionShardBudget.computeArmorHoldback(plan(), snapshot()))
+				return;
 			craft(step.itemId, step.label.toLowerCase(Locale.ROOT));
+		}
 	}
 
 	/** The armor goal's upgrades after the vials, once the T1 base is made, from the shards no other need takes. */

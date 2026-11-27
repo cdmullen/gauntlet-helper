@@ -336,17 +336,23 @@ public class Guidance
 	{
 		// Read before the post-loop step, which may end the loop.
 		boolean openingActive = opening.isActive();
-		// At home, every bowl craft (perfected weapons, more vials) comes before filling vials.
-		craftBeforeWater = opening.isInitialized() && isHomeTile(player.getWorldLocation()) && canCraft(plan);
-		boolean claimed = fillVials(plan) || objectTask.updatePostLoop(plan, route, view, player);
+		// At home, every bowl craft (perfected weapons, more vials) comes before filling vials. The home latch is read
+		// after this step, so the player's tile decides here.
+		boolean home = isHomeTile(player.getWorldLocation());
+		craftBeforeWater = opening.isInitialized() && home && canCraft(plan);
+		boolean claimed = fillVials(plan, home) || objectTask.updatePostLoop(plan, route, view, player);
 		if (!claimed && !plan.isReady() && !plan.isInventoryAction())
 			objectTask.chooseTarget(plan, route, view, player, openingActive);
 		orientation.endInitialDoorScanIfTargeted(targeting.target);
 	}
 
-	private boolean fillVials(Requirements plan)
+	/**
+	 * Away from home a fishing spot fills vials too; at home only the pump does, so the fill never leads out of home,
+	 * where a full inventory would send the player straight back.
+	 */
+	private boolean fillVials(Requirements plan, boolean home)
 	{
-		return isUseful(ObjectKind.WATER, plan) && routing.targetService(ObjectKind.WATER, true, "Fill empty vials");
+		return isUseful(ObjectKind.WATER, plan) && routing.targetService(ObjectKind.WATER, !home, "Fill empty vials");
 	}
 
 	/**
@@ -555,6 +561,9 @@ public class Guidance
 	public boolean needsInitialDoorScan() { return orientation.isInitialDoorScanNeeded(); }
 	public GauntletMap getGauntletMap() { return gauntletMap; }
 	public OpeningRoute getOpening() { return opening; }
+
+	/** In the first loop, away from home: the Grind cue waits for home (InventoryAdvice.buildActions). */
+	public boolean isFirstLoopAway() { return opening.isActive() && !isAtHome(); }
 	public List<TileObject> getBarriers() { return barriers; }
 	/** Doorways for the Guaranteed demi doors labels: unlit, into an undiscovered guaranteed demi room, while an upgrade is missing and the setting is on. */
 	public List<DemiDoorway> getGuaranteedDemiDoorways() { return guaranteedDemiDoorways; }
@@ -578,6 +587,9 @@ public class Guidance
 	public boolean needsTripTeleport() { return attempt.isTripTeleport(); }
 	public boolean isOpeningRouteActive() { return opening.isActive(); }
 	public boolean isAtHome() { return attempt.isAtHome(); }
+	/** Time low at home left an upgrade out of reach (Requirements.withOutOfReachUpgradesDropped), latched for the attempt. */
+	public boolean isUpgradesOutOfReach() { return attempt.isUpgradesOutOfReach(); }
+	public void latchUpgradesOutOfReach() { attempt.latchUpgradesOutOfReach(); }
 	public boolean isSceptreRecovery() { return priorities.sceptre.isSceptreRecovery(); }
 	public TileObject getToolStorage() { return toolStorage; }
 	public Map<TileObject, ObjectKind> getObjects() { return Collections.unmodifiableMap(objects); }
