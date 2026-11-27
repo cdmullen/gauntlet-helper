@@ -64,6 +64,7 @@ final class NextTask
 	private static final List<NextStep> NEXT_STEPS = Arrays.asList(
 			NextTask::previewPickup,
 			NextTask::previewAfterDemiKill,
+			NextTask::previewAfterTeleport,
 			NextTask::previewAfterRoomTour,
 			NextTask::previewNearestWork,
 			NextTask::previewOpeningRouteDoor);
@@ -206,6 +207,18 @@ final class NextTask
 		}
 		TileObject node = context.findNodeIn(room, label);
 		return node == null ? NextDecision.text(label) : NextDecision.object(node, context.objects.get(node)).withLabel(label);
+	}
+
+	/**
+	 * The trip teleport home with a material or Grym leaves still short after the demis: Next names it
+	 * (OptimizedTrip.describeGatherAfterHome), so the trip home isn't taken for the end of prep.
+	 */
+	static NextDecision previewAfterTeleport(TickContext context)
+	{
+		if (!context.isTripTeleport())
+			return null;
+		String label = OptimizedTrip.describeGatherAfterHome(context.plan);
+		return label == null ? null : NextDecision.text(label);
 	}
 
 	/** Past an open doorway toward room: a needed node in a lit room on the way, else the door to light; null if neither. */
