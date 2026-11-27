@@ -414,10 +414,21 @@ public final class Requirements
 			inventoryAction = InventoryAction.MAKE_SPACE;
 	}
 
-	/** Deferred upgrades with a full bag: cooking fills no slot and the upgrades go in place, so only fish left at home want one. */
+	/**
+	 * Deferred upgrades with a full bag: cooking fills no slot and the upgrades go in place, so only fish left at home want
+	 * one. A bag that holds only what the fight needs has nothing to drop for them: they stay, and the barrier is next.
+	 */
 	public boolean isFullBagHarmless()
 	{
-		return upgradesDeferred && (hasFishToCook() || storedFood == 0);
+		return upgradesDeferred && (hasFishToCook() || storedFood == 0 || isBagOnlyForHunllef());
+	}
+
+	private boolean isBagOnlyForHunllef()
+	{
+		for (Map.Entry<Integer, Integer> held : inventory.getHeldItems().entrySet())
+			if (held.getValue() > 0 && !InventoryAdvice.isKeptForHunllef(this, held.getKey()))
+				return false;
+		return true;
 	}
 
 	private void put(Requirement resource, int have, int target)
@@ -620,10 +631,55 @@ public final class Requirements
 
 	public boolean isUpgradesDeferred() { return upgradesDeferred; }
 
-	/** Deferred upgrades wait while raw fish need cooking or food left at home can be picked up. */
+	/**
+	 * Deferred upgrades at home: no new fight starts at low time, so an upgrade the held shards and materials can't pay
+	 * for is out of reach. Its shards and materials leave the targets, so the drop cues for spare shards and unneeded
+	 * materials take them; the upgrades still paid for keep theirs, cheapest first.
+	 */
+	public Requirements withOutOfReachUpgradesDropped()
+	{
+		if (!upgradesDeferred)
+			return this;
+		List<ArmorUpgrades.Step> upgrades = findArmorUpgrades();
+		List<ArmorUpgrades.Step> reachable = findReachableUpgrades();
+		int lostShards = ArmorUpgrades.sumShards(upgrades) - ArmorUpgrades.sumShards(reachable);
+		int lostMaterials = ArmorUpgrades.sumMaterials(upgrades) - ArmorUpgrades.sumMaterials(reachable);
+		if (lostShards == 0 && lostMaterials == 0)
+			return this;
+		Requirements copy = new Requirements(this);
+		for (Requirement resource : Requirement.MATERIALS)
+			copy.put(resource, getRow(resource).have, Math.max(0, getRow(resource).target - lostMaterials));
+		copy.put(Requirement.SHARDS, getRow(Requirement.SHARDS).have, Math.max(0, getRow(Requirement.SHARDS).target - lostShards));
+		return copy;
+	}
+
+	/** The upgrades the held shards and materials pay for, cheapest first, after everything else the plan needs. */
+	public List<ArmorUpgrades.Step> findReachableUpgrades()
+	{
+		List<ArmorUpgrades.Step> upgrades = findArmorUpgrades();
+		int shards = getUpgradeShardSpare();
+		Map<Requirement, Integer> spare = new EnumMap<>(Requirement.class);
+		int upgradeMaterials = ArmorUpgrades.sumMaterials(upgrades);
+		for (Requirement resource : Requirement.MATERIALS)
+			spare.put(resource, inventory.getHeld(resource.getItemId()) - Math.max(0, getRow(resource).target - upgradeMaterials));
+		List<ArmorUpgrades.Step> reachable = new ArrayList<>();
+		for (ArmorUpgrades.Step step : upgrades)
+			if (shards >= step.shards && spare.values().stream().allMatch(held -> held >= step.materials))
+			{
+				shards -= step.shards;
+				spare.replaceAll((resource, held) -> held - step.materials);
+				reachable.add(step);
+			}
+		return reachable;
+	}
+
+	/**
+	 * Deferred upgrades wait while raw fish need cooking or food left at home can be picked up. With the bag full, an
+	 * upgrade paid for is crafted first: it uses up materials, and nothing else makes room for that food.
+	 */
 	private boolean isFoodBeforeUpgrades()
 	{
-		return upgradesDeferred && (hasFishToCook() || storedFood > 0 && isReadyForStoredFood());
+		return upgradesDeferred && (hasFishToCook() || storedFood > 0 && isReadyForStoredFood() && inventory.getFreeSlots() > 0);
 	}
 
 	private boolean hasFishToCook()

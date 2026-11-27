@@ -587,6 +587,9 @@ public class Guidance
 	public boolean needsTripTeleport() { return attempt.isTripTeleport(); }
 	public boolean isOpeningRouteActive() { return opening.isActive(); }
 	public boolean isAtHome() { return attempt.isAtHome(); }
+	/** Time low at home left an upgrade out of reach (Requirements.withOutOfReachUpgradesDropped), latched for the attempt. */
+	public boolean isUpgradesOutOfReach() { return attempt.isUpgradesOutOfReach(); }
+	public void latchUpgradesOutOfReach() { attempt.latchUpgradesOutOfReach(); }
 	public boolean isSceptreRecovery() { return priorities.sceptre.isSceptreRecovery(); }
 	public TileObject getToolStorage() { return toolStorage; }
 	public Map<TileObject, ObjectKind> getObjects() { return Collections.unmodifiableMap(objects); }
