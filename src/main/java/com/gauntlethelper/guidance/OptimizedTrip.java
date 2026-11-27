@@ -41,6 +41,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -500,21 +501,35 @@ final class OptimizedTrip
 	}
 
 	/**
-	 * The teleport home's Next while a material or Grym leaves is still short after the demis, e.g. "Mine ore ×3 after
-	 * home": coming home after the hunt usually means prep is done, so the resource still to get is named. Null when
-	 * none is short.
+	 * The teleport home's Next while anything gathered is still short after the demis, e.g. "After home: mine 3 ore,
+	 * catch 4 paddlefish": coming home after the hunt usually means prep is done, so everything still to get outside
+	 * home is listed, in Requirement.GATHERED order. Fish stored at home already count toward FISH's row. Null when
+	 * nothing is short.
 	 */
 	static String describeGatherAfterHome(Requirements plan)
 	{
 		if (!plan.getRow(Requirement.UPGRADES).isComplete())
 			return null;
+		StringBuilder list = new StringBuilder();
 		for (Requirement resource : Requirement.GATHERED)
 		{
 			int missing = plan.getRow(resource).getMissing();
-			if (resource != Requirement.FISH && missing > 0)
-				return resource.getGatherLabel() + " ×" + missing + " after home";
+			if (missing <= 0)
+				continue;
+			list.append(list.length() == 0 ? "After home: " : ", ").append(describeGather(resource, missing));
 		}
-		return null;
+		return list.length() == 0 ? null : list.toString();
+	}
+
+	/** "mine 3 ore", from the resource's gather label ("Mine ore"); one Grym leaf is "pick 1 grym leaf". */
+	private static String describeGather(Requirement resource, int count)
+	{
+		String label = resource.getGatherLabel().toLowerCase(Locale.ROOT);
+		int space = label.indexOf(' ');
+		String noun = label.substring(space + 1);
+		if (resource == Requirement.GRYM_LEAVES && count == 1)
+			noun = "grym leaf";
+		return label.substring(0, space) + " " + count + " " + noun;
 	}
 
 	/** How many gathered resources are still short once gathered (item id to quantity) is added. */

@@ -210,7 +210,7 @@ final class NextTask
 	}
 
 	/**
-	 * The trip teleport home with a material or Grym leaves still short after the demis: Next names it
+	 * The trip teleport home with anything gathered still short after the demis: Next lists it all
 	 * (OptimizedTrip.describeGatherAfterHome), so the trip home isn't taken for the end of prep.
 	 */
 	static NextDecision previewAfterTeleport(TickContext context)
